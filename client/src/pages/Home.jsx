@@ -48,27 +48,37 @@ export default function Home() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="hero grain">
-        <div className="container hero-inner">
-          <span className="hero-tag rise">
-            <span className="ping" aria-hidden="true" />
-            Registration open for the new season
-          </span>
-          <h1 className="rise rise-1">
-            Home of the <span className="grad">Stallions</span>.
-          </h1>
-          <p className="lead rise rise-2">
-            DOrSU eSPORTS is the official competitive gaming organization of Davao Oriental State
-            University. Enter a tournament, get matched into a bracket, and represent your campus
-            on the stage.
-          </p>
-          <div className="hero-cta rise rise-3">
-            <Link to="/register" className="btn btn-primary">
-              <Icon name="bolt" size={16} /> Register Now
-            </Link>
-            <Link to="/tournaments" className="btn btn-ghost">
-              View Tournaments <Icon name="arrow" size={16} />
-            </Link>
+      <section className="hero">
+        <div className="container">
+          <div className="hero-inner">
+            <div className="hero-copy">
+              <span className="hero-tag rise">
+                <span className="ping" aria-hidden="true" />
+                Registration open for the new season
+              </span>
+              <h1 className="rise rise-1">
+                Home of the <span className="grad">Stallions</span>.
+              </h1>
+              <p className="lead rise rise-2">
+                DOrSU eSPORTS is the official competitive gaming organization of Davao Oriental
+                State University. Enter a tournament, get matched into a bracket, and represent
+                your campus on the stage.
+              </p>
+              <div className="hero-cta rise rise-3">
+                <Link to="/register" className="btn btn-primary">
+                  <Icon name="bolt" size={16} /> Register Now
+                </Link>
+                <Link to="/tournaments" className="btn btn-ghost">
+                  View Tournaments <Icon name="arrow" size={16} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="hero-emblem rise rise-2" aria-hidden="true">
+              <div className="emblem-ring">
+                <img src="/logos/dorsu-logo.jpg" alt="" />
+              </div>
+            </div>
           </div>
 
           {stats && (

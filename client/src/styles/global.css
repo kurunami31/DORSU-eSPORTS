@@ -117,20 +117,6 @@ button {
   background-size: 44px 44px;
 }
 
-/* ── Texture: film grain ────────────────────────────────── */
-.grain {
-  position: relative;
-}
-.grain::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 160px 160px;
-}
 
 /* ── Reveal-on-scroll ───────────────────────────────────── */
 .reveal {
@@ -608,7 +594,51 @@ select.input option { background: var(--bg-2); }
   background: linear-gradient(180deg, transparent 60%, var(--bg-0));
   pointer-events: none;
 }
-.hero-inner { position: relative; z-index: 1; max-width: 720px; }
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 56px;
+}
+.hero-copy { max-width: 660px; }
+
+/* Big org-logo emblem in the hero */
+.hero-emblem { flex-shrink: 0; }
+.emblem-ring {
+  position: relative;
+  width: min(30vw, 300px);
+  aspect-ratio: 1;
+  border-radius: 26px;
+  padding: 11px;
+  background: conic-gradient(from 220deg, var(--blue-bright), var(--yellow), var(--blue), var(--blue-bright));
+  box-shadow: 0 30px 70px rgba(47, 111, 228, 0.32), 0 0 50px rgba(255, 198, 26, 0.12);
+  animation: emblem-float 7s ease-in-out infinite;
+}
+.emblem-ring::before {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border: 1px dashed rgba(125, 150, 255, 0.3);
+  border-radius: 34px;
+}
+.emblem-ring img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 2px solid rgba(4, 6, 13, 0.55);
+}
+@keyframes emblem-float {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-12px) rotate(1.5deg); }
+}
+@media (max-width: 1024px) {
+  .hero-inner { flex-direction: column; gap: 30px; }
+  .hero-emblem { order: -1; }
+  .emblem-ring { width: 140px; }
+}
 
 .hero-tag {
   display: inline-flex;
@@ -935,6 +965,40 @@ select.input option { background: var(--bg-2); }
   position: relative;
   min-width: 100%;
 }
+
+/* Org-logo watermark in the bracket arena */
+.bracket-shell::after {
+  content: '';
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  width: 92px;
+  height: 92px;
+  background: url('/logos/dorsu-logo.jpg') center / cover no-repeat;
+  opacity: 0.05;
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+/* About story layout with the org logo */
+.about-story {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 36px;
+  align-items: center;
+}
+.about-story .about-logo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 22px;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 6px var(--panel-2);
+}
+@media (max-width: 720px) {
+  .about-story { grid-template-columns: 1fr; }
+  .about-story .about-logo { max-width: 210px; margin-inline: auto; }
+}
 .round-label {
   font-family: var(--font-display);
   font-size: 12px;
@@ -998,12 +1062,7 @@ select.input option { background: var(--bg-2); }
   padding-left: 9px;
 }
 .team-slot.winner .t-name { color: var(--yellow-bright); }
-.team-slot.winner::after {
-  content: '🏆';
-  position: absolute;
-  right: 8px;
-  font-size: 12px;
-}
+.team-slot.winner .t-mark { color: var(--yellow); }
 .team-slot.loser { opacity: 0.42; }
 .team-slot.clickable { cursor: pointer; }
 .team-slot.clickable:hover {
@@ -1064,6 +1123,25 @@ select.input option { background: var(--bg-2); }
     radial-gradient(800px 300px at 80% -20%, rgba(47, 111, 228, 0.2), transparent 60%),
     var(--bg-1);
 }
+.page-hero::after {
+  content: '';
+  position: absolute;
+  right: 5%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(20vw, 200px);
+  height: min(20vw, 200px);
+  background: url('/logos/dorsu-logo.jpg') center / cover no-repeat;
+  opacity: 0.06;
+  border-radius: 24px;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle, #000 40%, transparent 72%);
+  mask-image: radial-gradient(circle, #000 40%, transparent 72%);
+}
+@media (max-width: 800px) {
+  .page-hero::after { display: none; }
+}
+
 .page-hero h1 {
   font-family: var(--font-display);
   font-size: clamp(30px, 5vw, 46px);

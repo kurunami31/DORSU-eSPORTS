@@ -253,9 +253,9 @@ export async function runSeed() {
 // Run directly: `npm run seed`
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   runSeed()
-    .then((summary) => console.log('✔ Database seeded:', summary))
+    .then((summary) => console.log('[ok] Database seeded:', summary))
     .catch((err) => {
-      console.error('✖ Seed failed:', err);
+      console.error('[err] Seed failed:', err);
       process.exit(1);
     });
 }

@@ -140,7 +140,7 @@ export default function Bracket({ bracket, admin = false, onAdvance }) {
                       {isBye ? 'BYE' : props.name || 'TBD'}
                     </span>
                     <span className="t-mark" aria-hidden="true">
-                      {isBye ? '—' : winner ? '' : clickable ? <Icon name="crown" size={15} /> : ''}
+                      {isBye ? '—' : winner ? <Icon name="crown" size={13} /> : clickable ? <Icon name="crown" size={15} /> : ''}
                     </span>
                     {clickable && <span className="adv-hint"><Icon name="arrow" size={12} /> Advance</span>}
                   </div>

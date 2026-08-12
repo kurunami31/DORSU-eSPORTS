@@ -27,28 +27,39 @@ export default function About() {
       <section className="section" style={{ paddingTop: 48 }}>
         <div className="container" style={{ maxWidth: 860 }}>
           <div className="card" style={{ padding: 36 }}>
-            <h2 style={{ fontSize: 26, marginBottom: 16 }}>Our Story</h2>
-            <p style={{ color: 'var(--muted)', marginBottom: 14 }}>
-              Born from dorm-room scrims and intramurals hype, DOrSU eSPORTS has grown into the
-              university's home for competitive gaming. From Mobile Legends to Valorant to the
-              fighting-game stage, we give every Stallion a chance to compete — whether they're
-              chasing a varsity roster spot or just playing for the love of the game.
-            </p>
-            <p style={{ color: 'var(--muted)', marginBottom: 14 }}>
-              Our tournaments are run with a simple promise: fair brackets, clear schedules, and
-              results that are always announced. Register, get matched, and let your gameplay speak.
-            </p>
-            <p style={{ color: 'var(--muted)' }}>
-              Representing the blue and gold of Davao Oriental State University — and the rich
-              heritage of our province — in every arena we enter.
-            </p>
-            <p style={{ color: 'var(--muted)', marginTop: 14 }}>
-              Want to stay in the loop? Follow{' '}
-              <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>
-                DOrSU eSPORTS Community on Facebook
-              </a>{' '}
-              for scrims, updates, and everything happening in the scene.
-            </p>
+            <div className="about-story">
+              <img
+                className="about-logo"
+                src="/logos/dorsu-logo.jpg"
+                alt="DOrSU eSPORTS logo"
+              />
+              <div>
+                <h2 style={{ fontSize: 26, marginBottom: 16 }}>Our Story</h2>
+                <p style={{ color: 'var(--muted)', marginBottom: 14 }}>
+                  Born from dorm-room scrims and intramurals hype, DOrSU eSPORTS has grown into
+                  the university's home for competitive gaming. From Mobile Legends to Valorant
+                  to the fighting-game stage, we give every Stallion a chance to compete —
+                  whether they're chasing a varsity roster spot or just playing for the love of
+                  the game.
+                </p>
+                <p style={{ color: 'var(--muted)', marginBottom: 14 }}>
+                  Our tournaments are run with a simple promise: fair brackets, clear schedules,
+                  and results that are always announced. Register, get matched, and let your
+                  gameplay speak.
+                </p>
+                <p style={{ color: 'var(--muted)' }}>
+                  Representing the blue and gold of Davao Oriental State University — and the
+                  rich heritage of our province — in every arena we enter.
+                </p>
+                <p style={{ color: 'var(--muted)', marginTop: 14 }}>
+                  Want to stay in the loop? Follow{' '}
+                  <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>
+                    DOrSU eSPORTS Community on Facebook
+                  </a>{' '}
+                  for scrims, updates, and everything happening in the scene.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div style={{ marginTop: 56 }}>

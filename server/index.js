@@ -10,13 +10,13 @@ async function bootstrap() {
   if (DB_KIND === 'sqlite') {
     const count = await db.get('SELECT COUNT(*) AS n FROM tournaments');
     if (!count || count.n === 0) {
-      console.log('🌱 First boot detected — seeding demo data…');
-      console.log('✔ Seeded:', await runSeed());
+      console.log('[seed] First boot detected — seeding demo data…');
+      console.log('[ok] Seeded:', await runSeed());
     }
   }
 
   app.listen(PORT, () => {
-    console.log(`⚡ DOrSU eSPORTS API running at http://localhost:${PORT}`);
+    console.log(`[api] DOrSU eSPORTS API running at http://localhost:${PORT}`);
     console.log(`   Database: ${DB_KIND === 'sqlite' ? 'SQLite (local file)' : 'Supabase Postgres'}`);
     console.log(`   Admin passcode: ${process.env.ADMIN_PASSCODE || 'stallions'} (set ADMIN_PASSCODE to change)`);
   });
