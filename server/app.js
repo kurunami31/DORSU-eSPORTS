@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { requireAdmin, errorHandler, notFound } from './middleware.js';
 import tournamentsRouter from './routes/tournaments.js';
 import registrationsRouter from './routes/registrations.js';
@@ -7,11 +9,103 @@ import matchesRouter from './routes/matches.js';
 import announcementsRouter from './routes/announcements.js';
 import statsRouter from './routes/stats.js';
 
-// Local dev only — the client runs on a localhost port. Tighten for production.
 const app = express();
-app.use(cors({ origin: /^http:\/\/localhost(:\d+)?$/ }));
-app.use(express.json({ limit: '1mb' }));
 
+// Behind Vercel/Cloudflare, use the real client IP for rate limiting.
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+
+// ── Security headers ────────────────────────────────────────
+// CSP is enforced on the static SPA by vercel.json headers; the same policy is
+// applied here for /api responses (defense in depth).
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        'default-src': ["'self'"],
+        'script-src': ["'self'"],
+        'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        'img-src': ["'self'", 'data:', 'blob:'],
+        'connect-src': ["'self'"],
+        'object-src': ["'none'"],
+        'base-uri': ["'self'"],
+        'form-action': ["'self'"],
+        'frame-ancestors': ["'none'"],
+        'upgrade-insecure-requests': [],
+      },
+    },
+    crossOriginResourcePolicy: { policy: 'same-origin' },
+    frameguard: { action: 'deny' },
+  })
+);
+
+// ── CORS: localhost for dev + any origins in CORS_ORIGIN (comma-separated).
+// Same-origin requests (the deployed SPA calling /api) never need CORS headers.
+const extraOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin) || extraOrigins.includes(origin)) {
+        return cb(null, true);
+      }
+      cb(null, false); // no CORS headers → browser blocks cross-origin reads
+    },
+  })
+);
+
+app.use(express.json({ limit: '100kb' }));
+
+// ── Rate limiting ───────────────────────────────────────────
+const json429 = { error: 'Too many requests. Please try again later.' };
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 500,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: json429,
+});
+// Public registration endpoint — throttle spam/harvesting (POST only; the
+// public GET list must never be throttled this tightly).
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: json429,
+  skip: (req) => req.method !== 'POST',
+});
+// Admin passcode verification — the brute-force surface.
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: json429,
+});
+// Every state-changing request (and admin passcode attempts).
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: json429,
+});
+
+app.use('/api', apiLimiter);
+app.use('/api/admin', adminLimiter);
+app.use('/api/tournaments/:tournamentId/registrations', registerLimiter);
+app.use('/api', (req, res, next) => {
+  if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE' || req.method === 'PUT') {
+    return writeLimiter(req, res, next);
+  }
+  next();
+});
+
+// ── Routes ──────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.get('/api/admin/check', requireAdmin, (req, res) => res.json({ ok: true }));
 app.use('/api/stats', statsRouter);

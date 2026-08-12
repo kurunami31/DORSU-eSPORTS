@@ -1,10 +1,30 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAdmin, asyncHandler } from '../middleware.js';
+import { requiredStr, optionalStr } from '../validate.js';
 
 const router = Router();
 
 const CATEGORIES = ['Tournament', 'General', 'Community', 'Patch'];
+
+function validateAnnouncementInput(body, { partial = false } = {}) {
+  const out = {};
+  if (!partial || body.title !== undefined) {
+    out.title = requiredStr(body.title, { name: 'Title', min: 2, max: 120 });
+  }
+  if (!partial || body.body !== undefined) {
+    out.body = requiredStr(body.body, { name: 'Body', min: 1, max: 5000 });
+  }
+  if (!partial || body.category !== undefined) {
+    const category = body.category ?? 'General';
+    if (!CATEGORIES.includes(category)) throw Object.assign(new Error('Invalid category.'), { status: 400 });
+    out.category = category;
+  }
+  if (!partial || body.pinned !== undefined) {
+    out.pinned = body.pinned ? 1 : 0;
+  }
+  return out;
+}
 
 // List announcements (pinned first, newest first)
 router.get('/', asyncHandler(async (req, res) => {
@@ -24,13 +44,10 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // Create announcement (admin)
 router.post('/', requireAdmin, asyncHandler(async (req, res) => {
-  const { title, body, category = 'General', pinned = false } = req.body;
-  if (!title || !body) {
-    return res.status(400).json({ error: 'Title and body are required.' });
-  }
+  const data = validateAnnouncementInput(req.body);
   const result = await db.run(
     'INSERT INTO announcements (title, body, category, pinned) VALUES (?, ?, ?, ?)',
-    [String(title), String(body), CATEGORIES.includes(category) ? category : 'General', pinned ? 1 : 0]
+    [data.title, data.body, data.category, data.pinned]
   );
   res.status(201).json(await db.get('SELECT * FROM announcements WHERE id = ?', [result.lastInsertRowid]));
 }));
@@ -40,19 +57,12 @@ router.patch('/:id', requireAdmin, asyncHandler(async (req, res) => {
   const a = await db.get('SELECT * FROM announcements WHERE id = ?', [req.params.id]);
   if (!a) return res.status(404).json({ error: 'Announcement not found' });
 
+  const data = validateAnnouncementInput(req.body, { partial: true });
   const fields = [];
   const values = [];
-  for (const key of ['title', 'body', 'category', 'pinned']) {
-    if (req.body[key] !== undefined) {
-      fields.push(`${key} = ?`);
-      values.push(
-        key === 'pinned'
-          ? (req.body[key] ? 1 : 0)
-          : key === 'category'
-            ? (CATEGORIES.includes(req.body[key]) ? req.body[key] : 'General')
-            : req.body[key]
-      );
-    }
+  for (const [key, value] of Object.entries(data)) {
+    fields.push(`${key} = ?`);
+    values.push(value);
   }
   if (fields.length === 0) return res.status(400).json({ error: 'Nothing to update.' });
   values.push(a.id);

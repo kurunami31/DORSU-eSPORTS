@@ -91,6 +91,23 @@ vercel                     # preview
 vercel --prod              # production
 ```
 
+## 🛡 Security hardening
+
+- **Security headers** — CSP (scripts/styles/fonts locked down, framing denied), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, HSTS, strict `Referrer-Policy`, and a `Permissions-Policy` that blocks camera/mic/geolocation — set by `helmet` on the API and by `vercel.json` headers on the static site
+- **Rate limiting** — 500 req/15 min per IP globally, 10 registrations/15 min per IP, 30 admin passcode checks/15 min, 120 state-changing ops/15 min (rate limits are per-serverless-instance — soft limits, acceptable for this scale)
+- **Admin auth** — constant-time passcode comparison (`crypto.timingSafeEqual`); `ADMIN_PASSCODE` is **required** in production (the server refuses to boot without it — no hardcoded default)
+- **Input validation** — length caps on every field, email format, roster caps, integer/date/status/format whitelists, registration deadline ≤ start date; request bodies capped at 100 KB
+- **Privacy** — public registration lists expose only team name, captain name, and date; emails, contacts, and rosters are returned only to authenticated admins
+- **SQL injection** — all queries use prepared statements; user content is escaped by React on render (no `dangerouslySetInnerHTML`)
+- **Supabase RLS lockdown** — row-level security is enabled and the `anon` / `authenticated` / `service_role` roles are revoked from all tables, sequences, and functions, sealing the PostgREST API. The app connects as the project owner, which bypasses RLS, so nothing breaks — but even a leaked API key cannot read or write data over HTTP
+- **Error handling** — internal error details (SQL, stack traces) are logged server-side only; clients always receive generic messages
+
+### 🔑 Secrets checklist
+
+- `DATABASE_URL` and `ADMIN_PASSCODE` live only in env vars (Vercel) or the gitignored `.env` — never commit them
+- The Supabase **service_role** key is not used by the app at all (we connect via Postgres directly). If it was ever shared, regenerate it in **Project Settings → API**
+- If the database password was shared, reset it in **Project Settings → Database → Reset database password** and update `DATABASE_URL`
+
 ## 🔐 Admin Access
 
 - Visit **/admin** on the deployed site

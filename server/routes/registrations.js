@@ -1,26 +1,27 @@
 import { Router } from 'express';
 import { db } from '../db.js';
-import { requireAdmin, asyncHandler } from '../middleware.js';
+import { requireAdmin, asyncHandler, isAdmin } from '../middleware.js';
+import { ValidationError, requiredStr, validEmail, parseRoster } from '../validate.js';
 
 const router = Router();
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function parseRoster(roster) {
-  if (!Array.isArray(roster)) return [];
-  return roster
-    .filter((p) => p && (p.name || p.tag))
-    .map((p) => ({ name: String(p.name || '').trim(), tag: String(p.tag || '').trim() }))
-    .slice(0, 12);
-}
+// Fields shown to the public. Email/contact/roster are private — admin only.
+const PUBLIC_FIELDS = 'id, tournament_id, team_name, captain_name, created_at';
 
 // List registrations for a tournament
 router.get('/tournaments/:tournamentId/registrations', asyncHandler(async (req, res) => {
+  if (isAdmin(req)) {
+    const rows = await db.all(
+      'SELECT * FROM registrations WHERE tournament_id = ? ORDER BY created_at ASC',
+      [req.params.tournamentId]
+    );
+    return res.json(rows.map((r) => ({ ...r, roster: JSON.parse(r.roster || '[]') })));
+  }
   const rows = await db.all(
-    'SELECT * FROM registrations WHERE tournament_id = ? ORDER BY created_at ASC',
+    `SELECT ${PUBLIC_FIELDS} FROM registrations WHERE tournament_id = ? ORDER BY created_at ASC`,
     [req.params.tournamentId]
   );
-  res.json(rows.map((r) => ({ ...r, roster: JSON.parse(r.roster) })));
+  res.json(rows);
 }));
 
 // Register a team/player (public)
@@ -28,13 +29,17 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
   const tournament = await db.get('SELECT * FROM tournaments WHERE id = ?', [req.params.tournamentId]);
   if (!tournament) return res.status(404).json({ error: 'Tournament not found' });
 
-  const { team_name, captain_name, email, contact = '', roster = [] } = req.body;
+  const teamName = requiredStr(req.body.team_name, { name: 'Team name', min: 2, max: 50 });
+  const captain = requiredStr(req.body.captain_name, { name: 'Captain name', min: 2, max: 60 });
+  const email = validEmail(req.body.email);
+  const contact = req.body.contact === undefined || req.body.contact === null
+    ? ''
+    : String(req.body.contact).trim().slice(0, 30).replace(/[^\d+\-\s]/g, '');
 
-  const errors = [];
-  if (!team_name || !String(team_name).trim()) errors.push('Team name is required.');
-  if (!captain_name || !String(captain_name).trim()) errors.push('Captain name is required.');
-  if (!email || !EMAIL_RE.test(String(email))) errors.push('A valid email is required.');
-  if (errors.length) return res.status(400).json({ error: errors.join(' ') });
+  const maxRoster = tournament.team_size > 1
+    ? Math.max(tournament.team_size * 2, tournament.team_size + 3)
+    : 1;
+  const roster = parseRoster(req.body.roster, { maxEntries: maxRoster });
 
   if (tournament.status !== 'open') {
     return res.status(400).json({ error: 'Registration for this tournament is closed.' });
@@ -60,18 +65,17 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
                < (SELECT max_teams FROM tournaments WHERE id = ?)`,
         [
           tournament.id,
-          String(team_name).trim(),
-          String(captain_name).trim(),
-          String(email).trim(),
-          String(contact).trim(),
-          JSON.stringify(parseRoster(roster)),
+          teamName,
+          captain,
+          email,
+          contact,
+          JSON.stringify(roster),
           tournament.id,
           tournament.id,
         ]
       );
       if (result.changes === 0) {
-        const err = new Error('The tournament is already full. Better luck next time!');
-        err.status = 400;
+        const err = new ValidationError('The tournament is already full. Better luck next time!');
         throw err;
       }
       return tx.get('SELECT * FROM registrations WHERE id = ?', [result.lastInsertRowid]);
@@ -84,7 +88,7 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
     throw err;
   }
 
-  res.status(201).json({ ...saved, roster: parseRoster(roster) });
+  res.status(201).json({ ...saved, roster });
 }));
 
 // Remove a registration (admin)

@@ -74,6 +74,22 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_name
     ON registrations (tournament_id, LOWER(team_name));
+
+  -- ── Lockdown (defense in depth) ───────────────────────────
+  -- The app connects as the project owner (postgres.<ref>), which bypasses
+  -- row-level security. Enabling RLS and revoking privileges from the public
+  -- anon, authenticated and service_role roles seals the PostgREST REST API:
+  -- even with a leaked anon or service key, no one can read or write our
+  -- tables over HTTP. (The app never uses the REST API, only the direct PG
+  -- connection, so nothing the app needs is revoked.)
+  ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
+
+  REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated, service_role;
+  REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated, service_role;
+  REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated, service_role;
 `;
 
 // Convert SQLite-style `?` placeholders to Postgres `$1, $2, …`
