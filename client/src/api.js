@@ -57,6 +57,13 @@ export const deleteRegistration = (id) =>
 export const setWinner = (matchId, winnerId) =>
   api(`/matches/${matchId}/winner`, { method: 'POST', body: JSON.stringify({ winnerId }) });
 
+// Super-admin only (see /admin panel)
+export const getAdminStats = () => api('/admin/stats');
+export const getAdminUsers = (q) => api(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+export const deleteAdminUser = (id) => api(`/admin/users/${id}`, { method: 'DELETE' });
+export const setMaintenance = (enabled, message) =>
+  api('/admin/maintenance', { method: 'PUT', body: JSON.stringify({ enabled, message }) });
+
 export const createAnnouncement = (data) =>
   api('/announcements', { method: 'POST', body: JSON.stringify(data) });
 export const updateAnnouncement = (id, data) =>

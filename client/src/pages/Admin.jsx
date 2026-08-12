@@ -5,10 +5,12 @@ import {
   createTournament, updateTournament, deleteTournament, generateBrackets,
   deleteRegistration, getAnnouncements, createAnnouncement, updateAnnouncement,
   deleteAnnouncement,
+  getAdminStats, getAdminUsers, deleteAdminUser, setMaintenance, getMaintenance,
 } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import Icon from '../components/Icon.jsx';
+import { formatDate } from '../utils.js';
 
 const GAME_SUGGESTIONS = [
   'Mobile Legends: Bang Bang', 'Call of Duty: Mobile', 'Valorant', 'Tekken 8',
@@ -115,7 +117,7 @@ function Gate({ onLogin }) {
 
 /* ── Dashboard ──────────────────────────────────────────── */
 function Dashboard() {
-  const [tab, setTab] = useState('tournaments');
+  const [tab, setTab] = useState('overview');
   const { logout } = useAuth();
 
   return (
@@ -137,6 +139,14 @@ function Dashboard() {
           <div className="filter-tabs" role="tablist">
             <button
               role="tab"
+              aria-selected={tab === 'overview'}
+              className={`filter-tab ${tab === 'overview' ? 'active' : ''}`}
+              onClick={() => setTab('overview')}
+            >
+              <Icon name="bulb" size={14} /> Overview
+            </button>
+            <button
+              role="tab"
               aria-selected={tab === 'tournaments'}
               className={`filter-tab ${tab === 'tournaments' ? 'active' : ''}`}
               onClick={() => setTab('tournaments')}
@@ -151,12 +161,376 @@ function Dashboard() {
             >
               <Icon name="megaphone" size={14} /> Announcements
             </button>
+            <button
+              role="tab"
+              aria-selected={tab === 'players'}
+              className={`filter-tab ${tab === 'players' ? 'active' : ''}`}
+              onClick={() => setTab('players')}
+            >
+              <Icon name="users" size={14} /> Players
+            </button>
           </div>
 
-          {tab === 'tournaments' ? <TournamentsPanel /> : <AnnouncementsPanel />}
+          {tab === 'overview' && <OverviewPanel />}
+          {tab === 'tournaments' && <TournamentsPanel />}
+          {tab === 'announcements' && <AnnouncementsPanel />}
+          {tab === 'players' && <PlayersPanel />}
         </div>
       </section>
     </>
+  );
+}
+
+/* ── Overview panel (stats + system controls) ───────────── */
+function OverviewPanel() {
+  const [stats, setStats] = useState(null);
+
+  const load = () => getAdminStats().then(setStats).catch(() => setStats(null));
+  useEffect(() => {
+    load();
+  }, []);
+
+  if (!stats) {
+    return <div className="loading" style={{ padding: 40 }}>Crunching numbers…</div>;
+  }
+
+  const maxGame = Math.max(1, ...stats.byGame.map((g) => g.tournaments + g.teams));
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 22 }}>Site Overview</h2>
+        <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
+          Everything happening across the arena, at a glance.
+        </p>
+      </div>
+
+      <div className="admin-stats">
+        <div className="admin-stat">
+          <div className="num">{stats.tournaments}</div>
+          <div className="lbl">Tournaments</div>
+          <div className="sub">{stats.open} open · {stats.live} live · {stats.finished} finished</div>
+        </div>
+        <div className="admin-stat">
+          <div className="num">{stats.teams}</div>
+          <div className="lbl">Teams Registered</div>
+          <div className="sub">{stats.fillRate}% of {stats.capacity} total slots</div>
+        </div>
+        <div className="admin-stat">
+          <div className="num">{stats.announcements}</div>
+          <div className="lbl">Announcements</div>
+          <div className="sub">posted to the feed</div>
+        </div>
+        <div className="admin-stat">
+          <div className="num">{stats.players}</div>
+          <div className="lbl">Player Accounts</div>
+          <div className="sub">signed-up players</div>
+        </div>
+      </div>
+
+      <div className="admin-cards">
+        <div className="card admin-card">
+          <h4><Icon name="gamepad" size={15} /> By Game</h4>
+          {stats.byGame.length === 0 ? (
+            <p style={{ color: 'var(--muted-2)', fontSize: 13.5 }}>No tournaments yet.</p>
+          ) : (
+            stats.byGame.map((g) => (
+              <div className="admin-game-row" key={g.game}>
+                <span className="g-name">{g.game}</span>
+                <span className="g-bar">
+                  <span style={{ width: `${Math.round(((g.tournaments + g.teams) / maxGame) * 100)}%` }} />
+                </span>
+                <span className="g-val">{g.tournaments} tourn · {g.teams} teams</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="card admin-card">
+          <h4><Icon name="crosshair" size={15} /> Status</h4>
+          <div className="admin-list">
+            {['open', 'locked', 'active', 'finished'].map((s) => {
+              const n = (stats.byStatus.find((x) => x.status === s) || {}).n || 0;
+              return (
+                <div className="admin-list-item" key={s}>
+                  <div className="li-main"><StatusBadge status={s} /></div>
+                  <div className="li-side">{n} tournament{n === 1 ? '' : 's'}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="card admin-card">
+          <h4><Icon name="users" size={15} /> Latest Sign-ups</h4>
+          {stats.recent.length === 0 ? (
+            <p style={{ color: 'var(--muted-2)', fontSize: 13.5 }}>No teams registered yet.</p>
+          ) : (
+            <div className="admin-list">
+              {stats.recent.map((r, i) => (
+                <div className="admin-list-item" key={i}>
+                  <div className="li-main">
+                    <b>{r.team_name}</b>
+                    <div className="li-sub">{r.captain_name} · {r.tournament}</div>
+                  </div>
+                  <div className="li-side">{formatDate(r.created_at)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card admin-card">
+          <h4><Icon name="calendar" size={15} /> Upcoming Deadlines</h4>
+          {stats.deadlines.length === 0 ? (
+            <p style={{ color: 'var(--muted-2)', fontSize: 13.5 }}>No open registrations with deadlines.</p>
+          ) : (
+            <div className="admin-list">
+              {stats.deadlines.map((d) => (
+                <div className="admin-list-item" key={d.id}>
+                  <div className="li-main">
+                    <b>{d.name}</b>
+                    <div className="li-sub">Registration closes</div>
+                  </div>
+                  <div className="li-side">{formatDate(d.registration_deadline)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card admin-card">
+          <h4><Icon name="trophy" size={15} /> Most Entries</h4>
+          {stats.top.length === 0 ? (
+            <p style={{ color: 'var(--muted-2)', fontSize: 13.5 }}>No tournaments yet.</p>
+          ) : (
+            <div className="admin-list">
+              {stats.top.map((t) => (
+                <div className="admin-list-item" key={t.id}>
+                  <div className="li-main">
+                    <b>{t.name}</b>
+                    <div className="li-sub"><StatusBadge status={t.status} /></div>
+                  </div>
+                  <div className="li-side">{t.teams} team{t.teams === 1 ? '' : 's'}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card admin-card">
+          <h4><Icon name="shield" size={15} /> System Controls</h4>
+          <MaintenanceControl />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Live maintenance toggle ────────────────────────────── */
+function MaintenanceControl() {
+  const [state, setState] = useState(null);
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    getMaintenance()
+      .then((r) => {
+        setState(r);
+        setMsg(r.message || '');
+      })
+      .catch(() => {});
+  }, []);
+
+  const apply = async (enabled, message) => {
+    setBusy(true);
+    setError('');
+    try {
+      const r = await setMaintenance(enabled, message);
+      setState(r);
+      setMsg(r.message || '');
+    } catch (err) {
+      setError(err.message || 'Failed to update maintenance mode.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!state) {
+    return <p style={{ color: 'var(--muted-2)', fontSize: 13.5 }}>Loading system state…</p>;
+  }
+
+  return (
+    <div>
+      <div className="maintenance-control">
+        <div className="mc-main">
+          <b>Maintenance mode</b>
+          <p>
+            {state.maintenance
+              ? 'The site is showing the Under Maintenance page to visitors.'
+              : 'Visitors see the normal site. Flip this on while you update things.'}
+          </p>
+        </div>
+        <button
+          className="switch"
+          role="switch"
+          aria-checked={state.maintenance}
+          aria-label="Toggle maintenance mode"
+          disabled={busy}
+          onClick={() => apply(!state.maintenance, state.maintenance ? msg : '')}
+        />
+      </div>
+
+      {state.maintenance && (
+        <div style={{ marginTop: 16 }}>
+          <label htmlFor="maint-msg" style={{ display: 'block', fontFamily: 'var(--font-head)', fontSize: 12.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
+            Message shown to visitors
+          </label>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <input
+              id="maint-msg"
+              className="input"
+              value={msg}
+              maxLength={500}
+              onChange={(e) => setMsg(e.target.value)}
+              placeholder="e.g. We're updating the registration system — back soon!"
+              style={{ flex: 1, minWidth: 220 }}
+            />
+            <button className="btn btn-blue btn-sm" disabled={busy} onClick={() => apply(true, msg)}>
+              {busy ? <span className="spin" /> : <Icon name="check" size={14} />} Save
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <div className="form-error" style={{ marginTop: 12 }}>{error}</div>}
+      <p style={{ color: 'var(--muted-2)', fontSize: 12, marginTop: 12 }}>
+        Tip: a MAINTENANCE_MODE environment variable overrides this switch while it is set.
+      </p>
+    </div>
+  );
+}
+
+/* ── Players panel (super-admin only) ───────────────────── */
+function PlayersPanel() {
+  const [users, setUsers] = useState([]);
+  const [q, setQ] = useState('');
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [msgType, setMsgType] = useState('success');
+  const { user: me } = useAuth();
+
+  const load = (search) => {
+    setBusy(true);
+    getAdminUsers(search || '')
+      .then(setUsers)
+      .catch(() => setUsers([]))
+      .finally(() => setBusy(false));
+  };
+
+  useEffect(() => {
+    load('');
+  }, []);
+
+  const search = (e) => {
+    e.preventDefault();
+    setQuery(q);
+    load(q);
+  };
+
+  const remove = async (u) => {
+    if (u.role === 'admin') return;
+    if (!window.confirm(`Delete the account for "${u.name}" (${u.email})? Their session is ended immediately.`)) return;
+    setMsg('');
+    try {
+      await deleteAdminUser(u.id);
+      setMsg('Player account deleted.');
+      setMsgType('success');
+      load(query);
+    } catch (err) {
+      setMsg(err.message);
+      setMsgType('error');
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ fontSize: 22 }}>Player Accounts</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
+            Every signed-up account. Super admins are protected from deletion.
+          </p>
+        </div>
+        <form onSubmit={search} style={{ display: 'flex', gap: 10 }}>
+          <input
+            className="input"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name, email, username…"
+            style={{ width: 240 }}
+            aria-label="Search players"
+          />
+          <button className="btn btn-blue btn-sm" type="submit">
+            <Icon name="crosshair" size={14} /> Search
+          </button>
+        </form>
+      </div>
+
+      {msg && <div className={msgType === 'error' ? 'form-error' : 'form-success'}>{msg}</div>}
+
+      {busy ? (
+        <div className="loading" style={{ padding: 40 }}>Loading accounts…</div>
+      ) : users.length === 0 ? (
+        <div className="empty">No accounts match{query ? ` “${query}”` : ''}.</div>
+      ) : (
+        <div className="card" style={{ padding: '8px 8px', overflowX: 'auto' }}>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Teams</th>
+                <th>Joined</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>
+                    <div className="u-name">{u.name}</div>
+                    {u.username && <div className="u-email">@{u.username}</div>}
+                  </td>
+                  <td className="u-email">{u.email}</td>
+                  <td>
+                    <span className={`role-chip ${u.role}`}>
+                      {u.role === 'admin' ? 'Super Admin' : 'Player'}
+                    </span>
+                  </td>
+                  <td style={{ color: 'var(--muted)' }}>{u.registrations}</td>
+                  <td className="u-email">{formatDate(u.created_at)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    {u.role === 'admin' ? (
+                      <span style={{ color: 'var(--muted-2)', fontSize: 12.5 }}>
+                        {u.id === me?.id ? 'You' : 'Protected'}
+                      </span>
+                    ) : (
+                      <button className="btn btn-danger btn-sm" onClick={() => remove(u)}>
+                        <Icon name="trash" size={13} /> Delete
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 

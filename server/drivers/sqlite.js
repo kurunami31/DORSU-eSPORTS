@@ -86,6 +86,12 @@ const SCHEMA = `
     expires_at TEXT NOT NULL
   );
 
+  -- Key/value settings (e.g. maintenance mode toggled from the admin panel).
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT ''
+  );
+
   CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);

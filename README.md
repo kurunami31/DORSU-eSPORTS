@@ -136,8 +136,12 @@ vercel --prod              # production
 | GET | `/api/announcements` | Announcements feed |
 | POST / PATCH / DELETE | `/api/announcements[/:id]` | Manage announcements *(admin)* |
 | GET | `/api/stats` | Site-wide stats |
-| GET | `/api/maintenance` | Maintenance flag + message (`MAINTENANCE_MODE` env var) |
+| GET | `/api/maintenance` | Maintenance flag + message (env var or panel setting) |
 | GET | `/api/health` | Liveness probe (+ current `maintenance` flag) |
+| GET | `/api/admin/stats` | Rich dashboard stats (game/status breakdowns, recent sign-ups, deadlines) *(admin)* |
+| GET | `/api/admin/users` | List player accounts (+ `?q=` search) *(admin)* |
+| DELETE | `/api/admin/users/:id` | Delete a player account (admins protected) *(admin)* |
+| PUT | `/api/admin/maintenance` | Toggle maintenance mode + set message live from the panel *(admin)* |
 
 Admin routes require `Authorization: Bearer <admin-session-token>` (obtained via `POST /api/auth/admin-login`).
 

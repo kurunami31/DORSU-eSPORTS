@@ -82,7 +82,9 @@ async function req(path, opts = {}) {
     (await req('/api/tournaments/2/registrations', {
       method: 'POST',
       body: JSON.stringify({
-        team_name: 'Roster Cap Test',
+        // Unique per run — the DB enforces unique team names per tournament,
+        // so a persistent database (Supabase) would reject a re-run otherwise.
+        team_name: `Roster Cap Test ${Date.now()}`,
         captain_name: 'Cap',
         email: 'cap@dorsu.edu.ph',
         roster: Array.from({ length: 30 }, (_, i) => ({ name: `P${i}`, tag: `t${i}` })),

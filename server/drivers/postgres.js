@@ -91,6 +91,12 @@ const SCHEMA = `
     expires_at TIMESTAMPTZ NOT NULL
   );
 
+  -- Key/value settings (e.g. maintenance mode toggled from the admin panel).
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT ''
+  );
+
   CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
@@ -128,6 +134,22 @@ function toPg(sql, params = []) {
   return { sql: sql.replace(/\?/g, () => `$${++i}`), params };
 }
 
+// Tables that expose an `id` column (so INSERTs can safely RETURNING id).
+// Some tables (e.g. settings) use a different primary key and must not get
+// the RETURNING clause appended. The cache is built lazily on the first
+// INSERT — after the schema has been created at boot — so it is always fresh
+// for this process's lifetime (tables are never added at runtime).
+let tablesWithId = null;
+async function tablesWithIdColumn() {
+  if (tablesWithId) return tablesWithId;
+  const r = await pool.query(
+    `SELECT table_name FROM information_schema.columns
+     WHERE table_schema = 'public' AND column_name = 'id'`
+  );
+  tablesWithId = new Set(r.rows.map((x) => x.table_name));
+  return tablesWithId;
+}
+
 // Make payloads identical to the SQLite driver's output:
 // Date → 'YYYY-MM-DD HH:MM:SS' (UTC), booleans → 0/1.
 function normalizeRow(row) {
@@ -148,7 +170,11 @@ async function queryAll(client, sql, params = []) {
 
 async function queryRun(client, sql, params = []) {
   let s = sql;
-  if (/^\s*INSERT/i.test(s) && !/RETURNING/i.test(s)) s += ' RETURNING id';
+  if (/^\s*INSERT/i.test(s) && !/RETURNING/i.test(s)) {
+    const m = s.match(/INSERT\s+INTO\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
+    const tables = await tablesWithIdColumn();
+    if (m && tables.has(m[1])) s += ' RETURNING id';
+  }
   const { sql: s2, params: p2 } = toPg(s, params);
   const r = await client.query(s2, p2);
   return {
