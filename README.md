@@ -52,8 +52,10 @@ Both paths share one async driver interface and produce identical API responses.
 
 ### 2. Create the schema + seed data (once)
 
+Run the seed with the **direct connection** string (port `5432`, e.g. `postgresql://postgres.<ref>:<password>@db.<ref>.supabase.co:5432/postgres`) — DDL is more reliable on the direct connection than through the transaction pooler:
+
 ```bash
-DATABASE_URL="postgresql://postgres.<ref>:<password>@...pooler.supabase.com:6543/postgres?pgbouncer=true" npm run seed
+DATABASE_URL="postgresql://postgres.<ref>:<password>@db.<ref>.supabase.co:5432/postgres" npm run seed
 ```
 
 ## ▲ Vercel Deployment

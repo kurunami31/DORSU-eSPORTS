@@ -15,7 +15,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
   max: 1,
   idleTimeoutMillis: 10_000,
-  connectionTimeoutMillis: 3_000,
+  connectionTimeoutMillis: 5_000,
 });
 
 const SCHEMA = `

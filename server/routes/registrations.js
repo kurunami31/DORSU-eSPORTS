@@ -47,23 +47,17 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
     }
   }
 
-  // Count check + insert are atomic: the whole block runs inside a transaction
-  // (both drivers), and a functional unique index backstops duplicate names.
+  // Atomic slot enforcement: the INSERT only runs while the confirmed-slot
+  // count is below max_teams, evaluated in the same statement — safe even with
+  // multiple serverless instances. A unique index backstops duplicate names.
   let saved;
   try {
     saved = await db.withTransaction(async (tx) => {
-      const count = await tx.get(
-        "SELECT COUNT(*) AS n FROM registrations WHERE tournament_id = ? AND status = 'confirmed'",
-        [tournament.id]
-      );
-      if (count && count.n >= tournament.max_teams) {
-        const err = new Error('The tournament is already full. Better luck next time!');
-        err.status = 400;
-        throw err;
-      }
       const result = await tx.run(
         `INSERT INTO registrations (tournament_id, team_name, captain_name, email, contact, roster, status)
-         VALUES (?, ?, ?, ?, ?, ?, 'confirmed')`,
+         SELECT ?, ?, ?, ?, ?, ?, 'confirmed'
+         WHERE (SELECT COUNT(*) FROM registrations WHERE tournament_id = ? AND status = 'confirmed')
+               < (SELECT max_teams FROM tournaments WHERE id = ?)`,
         [
           tournament.id,
           String(team_name).trim(),
@@ -71,8 +65,15 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
           String(email).trim(),
           String(contact).trim(),
           JSON.stringify(parseRoster(roster)),
+          tournament.id,
+          tournament.id,
         ]
       );
+      if (result.changes === 0) {
+        const err = new Error('The tournament is already full. Better luck next time!');
+        err.status = 400;
+        throw err;
+      }
       return tx.get('SELECT * FROM registrations WHERE id = ?', [result.lastInsertRowid]);
     });
   } catch (err) {

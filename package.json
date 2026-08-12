@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "DOrSU eSPORTS — tournament matching, registrations, and announcements",
+  "type": "module",
   "engines": {
     "node": "22.x"
   },
