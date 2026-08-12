@@ -789,15 +789,22 @@ select.input option { background: var(--bg-2); }
   margin-bottom: 16px;
   font-family: var(--font-head);
 }
-.footer p, .footer a, .footer li {
+.footer p, .footer li {
   color: var(--muted);
   font-size: 14px;
   /* long tokens (e.g. the email) must wrap, never paint past the border */
   overflow-wrap: anywhere;
 }
+/* Regular footer links stay muted; .btn links keep their own button colors
+   (the blue Facebook CTA must stay white-on-blue, not gray-on-blue) */
+.footer a:not(.btn) {
+  color: var(--muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
 .footer ul { list-style: none; }
 .footer ul li { margin-bottom: 10px; }
-.footer a:hover { color: var(--blue-bright); }
+.footer a:not(.btn):hover { color: var(--blue-bright); }
 /* Let grid tracks shrink to 1fr instead of being forced wide by content
    min-width (which used to push the Contact column past the container edge) */
 .footer-grid > * { min-width: 0; }
