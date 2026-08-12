@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import ChatWidget from './components/ChatWidget.jsx';
+import WelcomeGate from './components/WelcomeGate.jsx';
 import Home from './pages/Home.jsx';
 import Tournaments from './pages/Tournaments.jsx';
 import TournamentDetail from './pages/TournamentDetail.jsx';
@@ -94,6 +95,7 @@ export default function App() {
 
   return (
     <MaintenanceGate maintenance={maintenance}>
+      <WelcomeGate />
       <ScrollToTop />
       <Navbar />
       <ChatWidget />
