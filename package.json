@@ -1,0 +1,25 @@
+{
+  "name": "dorsu-esports",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DOrSU eSPORTS — tournament matching, registrations, and announcements",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n server,client -c blue,yellow \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm --prefix client run build",
+    "seed": "npm run seed --prefix server"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
