@@ -33,16 +33,20 @@ export function teamSizeLabel(teamSize) {
   return teamSize === 1 ? '1v1' : `${teamSize}v${teamSize}`;
 }
 
+// Game → icon + optional real logo art (images live in client/public/logos/)
 export const GAMES = {
-  'Mobile Legends: Bang Bang': { icon: '⚔️', tint: 'blue' },
-  Valorant: { icon: '🎯', tint: 'red' },
-  'Tekken 8': { icon: '👊', tint: 'yellow' },
-  'Dota 2': { icon: '🌙', tint: 'green' },
-  'League of Legends': { icon: '🏆', tint: 'gold' },
-  'Call of Duty': { icon: '💥', tint: 'red' },
-  'FIFA': { icon: '⚽', tint: 'green' },
+  'Mobile Legends: Bang Bang': { icon: 'gamepad', tint: 'blue', image: '/logos/ml-logo.webp' },
+  'Call of Duty: Mobile': { icon: 'crosshair', tint: 'green', image: '/logos/codm-logo.png' },
+  Valorant: { icon: 'crosshair', tint: 'red' },
+  'Tekken 8': { icon: 'flame', tint: 'yellow' },
+  'Dota 2': { icon: 'moon', tint: 'green' },
+  'League of Legends': { icon: 'trophy', tint: 'gold' },
+  'Call of Duty': { icon: 'crosshair', tint: 'red' },
+  FIFA: { icon: 'medal', tint: 'green' },
 };
 
 export function gameGlyph(game) {
-  return GAMES[game] || { icon: '🎮', tint: 'blue' };
+  return GAMES[game] || { icon: 'gamepad', tint: 'blue' };
 }
+
+export const FACEBOOK_URL = 'https://www.facebook.com/dorsuesportscommunity';

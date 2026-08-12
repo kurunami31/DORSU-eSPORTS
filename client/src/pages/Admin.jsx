@@ -7,10 +7,11 @@ import {
   deleteAnnouncement,
 } from '../api.js';
 import StatusBadge from '../components/StatusBadge.jsx';
+import Icon from '../components/Icon.jsx';
 
 const GAME_SUGGESTIONS = [
-  'Mobile Legends: Bang Bang', 'Valorant', 'Tekken 8', 'Dota 2',
-  'League of Legends', 'Call of Duty', 'FIFA',
+  'Mobile Legends: Bang Bang', 'Call of Duty: Mobile', 'Valorant', 'Tekken 8',
+  'Dota 2', 'League of Legends', 'FIFA',
 ];
 
 const CATEGORIES = ['Tournament', 'General', 'Community', 'Patch'];
@@ -56,7 +57,9 @@ function Gate({ onAuth }) {
       <div className="container">
         <form className="card" style={{ maxWidth: 440, margin: '0 auto', padding: 38 }} onSubmit={submit}>
           <div style={{ textAlign: 'center', marginBottom: 22 }}>
-            <div style={{ fontSize: 42, marginBottom: 8 }} aria-hidden="true">🔐</div>
+            <div style={{ width: 60, height: 60, margin: '0 auto 12px', borderRadius: 18, display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg, var(--blue-soft), var(--yellow-soft))', border: '1px solid var(--line-strong)', color: 'var(--yellow)' }} aria-hidden="true">
+              <Icon name="lock" size={26} />
+            </div>
             <h2 style={{ fontSize: 24 }}>Admin Access</h2>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 6 }}>
               Enter the passcode to manage tournaments and announcements.
@@ -77,7 +80,7 @@ function Gate({ onAuth }) {
             />
           </div>
           <button className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
-            {busy ? <span className="spin" /> : '🔓'} Unlock
+            {busy ? <span className="spin" /> : <Icon name="lockOpen" size={15} />} Unlock
           </button>
           <p style={{ color: 'var(--muted-2)', fontSize: 12.5, textAlign: 'center', marginTop: 14 }}>
             Change it by setting the <code>ADMIN_PASSCODE</code> environment variable.
@@ -121,7 +124,7 @@ function Dashboard() {
               className={`filter-tab ${tab === 'tournaments' ? 'active' : ''}`}
               onClick={() => setTab('tournaments')}
             >
-              🏟️ Tournaments
+              <Icon name="trophy" size={14} /> Tournaments
             </button>
             <button
               role="tab"
@@ -129,7 +132,7 @@ function Dashboard() {
               className={`filter-tab ${tab === 'announcements' ? 'active' : ''}`}
               onClick={() => setTab('announcements')}
             >
-              📢 Announcements
+              <Icon name="megaphone" size={14} /> Announcements
             </button>
           </div>
 
@@ -148,6 +151,7 @@ function TournamentsPanel() {
   const [form, setForm] = useState(EMPTY_TOURNAMENT);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [msgType, setMsgType] = useState('success');
   const [expanded, setExpanded] = useState(null);
   const [regs, setRegs] = useState([]);
   const [regsBusy, setRegsBusy] = useState(false);
@@ -193,10 +197,12 @@ function TournamentsPanel() {
         await createTournament(form);
         setMsg('Tournament created.');
       }
+      setMsgType('success');
       setShowForm(false);
       await load();
     } catch (err) {
-      setMsg(`⚠ ${err.message}`);
+      setMsg(err.message);
+      setMsgType('error');
     } finally {
       setBusy(false);
     }
@@ -232,9 +238,11 @@ function TournamentsPanel() {
     try {
       await generateBrackets(t.id);
       setMsg(`Brackets generated for ${t.name}.`);
+      setMsgType('success');
       await load();
     } catch (err) {
-      setMsg(`⚠ ${err.message}`);
+      setMsg(err.message);
+      setMsgType('error');
     }
   };
 
@@ -242,10 +250,12 @@ function TournamentsPanel() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}>
         <h2 style={{ fontSize: 22 }}>Manage Tournaments</h2>
-        <button className="btn btn-primary btn-sm" onClick={startCreate}>+ New Tournament</button>
+        <button className="btn btn-primary btn-sm" onClick={startCreate}>
+          <Icon name="plus" size={15} /> New Tournament
+        </button>
       </div>
 
-      {msg && <div className={msg.startsWith('⚠') ? 'form-error' : 'form-success'}>{msg}</div>}
+      {msg && <div className={msgType === 'error' ? 'form-error' : 'form-success'}>{msg}</div>}
 
       {showForm && (
         <form className="card" style={{ padding: 28, marginBottom: 28 }} onSubmit={submit}>
@@ -326,10 +336,12 @@ function TournamentsPanel() {
                   </button>
                   {t.status !== 'finished' && !t.bracket && (
                     <button className="btn btn-primary btn-sm" onClick={() => doGenerate(t)}>
-                      🎲 Generate Brackets
+                      <Icon name="dice" size={14} /> Generate Brackets
                     </button>
                   )}
-                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit(t)}>Edit</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit(t)}>
+                    <Icon name="pencil" size={13} /> Edit
+                  </button>
                   <button
                     className="btn btn-danger btn-sm"
                     onClick={async () => {
@@ -367,7 +379,9 @@ function TournamentsPanel() {
                               {r.captain_name} · {r.email} {r.roster?.length ? `· ${r.roster.length} player(s)` : ''}
                             </div>
                           </div>
-                          <button className="btn btn-danger btn-sm" onClick={() => removeTeam(r.id)}>Remove</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => removeTeam(r.id)}>
+                            <Icon name="trash" size={13} /> Remove
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -390,6 +404,7 @@ function AnnouncementsPanel() {
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [msgType, setMsgType] = useState('success');
 
   const load = () => getAnnouncements().then(setItems).catch(() => {});
   useEffect(() => {
@@ -420,10 +435,12 @@ function AnnouncementsPanel() {
         await createAnnouncement(form);
         setMsg('Announcement published.');
       }
+      setMsgType('success');
       setShowForm(false);
       await load();
     } catch (err) {
-      setMsg(`⚠ ${err.message}`);
+      setMsg(err.message);
+      setMsgType('error');
     } finally {
       setBusy(false);
     }
@@ -433,10 +450,12 @@ function AnnouncementsPanel() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}>
         <h2 style={{ fontSize: 22 }}>Manage Announcements</h2>
-        <button className="btn btn-primary btn-sm" onClick={startCreate}>+ New Announcement</button>
+        <button className="btn btn-primary btn-sm" onClick={startCreate}>
+          <Icon name="plus" size={15} /> New Announcement
+        </button>
       </div>
 
-      {msg && <div className={msg.startsWith('⚠') ? 'form-error' : 'form-success'}>{msg}</div>}
+      {msg && <div className={msgType === 'error' ? 'form-error' : 'form-success'}>{msg}</div>}
 
       {showForm && (
         <form className="card" style={{ padding: 28, marginBottom: 28 }} onSubmit={submit}>
@@ -460,7 +479,7 @@ function AnnouncementsPanel() {
                   onChange={(e) => setForm((f) => ({ ...f, pinned: e.target.checked }))}
                   style={{ width: 18, height: 18, accentColor: 'var(--yellow)' }}
                 />
-                📌 Pin to top
+                <Icon name="pin" size={14} /> Pin to top
               </label>
             </div>
           </div>
@@ -485,7 +504,7 @@ function AnnouncementsPanel() {
             <div key={a.id} className="card" style={{ padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <span className={`a-category ${a.category}`}>{a.category}</span>
-                {a.pinned === 1 && <span className="a-pin">📌 Pinned</span>}
+                {a.pinned === 1 && <span className="a-pin"><Icon name="pin" size={12} /> Pinned</span>}
                 <b style={{ flex: 1, minWidth: 200 }}>{a.title}</b>
                 <button className="btn btn-ghost btn-sm" onClick={() => startEdit(a)}>Edit</button>
                 <button

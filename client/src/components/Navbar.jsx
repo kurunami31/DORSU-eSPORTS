@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import Logo from './Logo.jsx';
+import Icon from './Icon.jsx';
 
 const LINKS = [
   { to: '/', label: 'Home' },
@@ -34,10 +35,10 @@ export default function Navbar() {
         </nav>
         <div className="nav-cta">
           <Link to="/tournaments" className="btn btn-ghost btn-sm">
-            View Brackets
+            Brackets
           </Link>
           <Link to="/register" className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>
-            Register
+            <Icon name="bolt" size={15} /> Register
           </Link>
           <button
             className="nav-burger"

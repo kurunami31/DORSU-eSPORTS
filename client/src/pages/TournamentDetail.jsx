@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { getTournament, getRegistrations, generateBrackets, getAdminKey } from '../api.js';
 import StatusBadge from '../components/StatusBadge.jsx';
 import Bracket from '../components/Bracket.jsx';
-import GameGlyph from '../components/GameGlyph.jsx';
+import { GameTile } from '../components/GameGlyph.jsx';
+import Icon from '../components/Icon.jsx';
 import { formatDate, teamSizeLabel } from '../utils.js';
 
 export default function TournamentDetail() {
@@ -66,19 +67,19 @@ export default function TournamentDetail() {
       <section className="page-hero">
         <div className="container">
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
-            <GameGlyph game={tournament.game} />
+            <GameTile game={tournament.game} />
             <StatusBadge status={tournament.status} />
           </div>
           <h1>{tournament.name}</h1>
           <p>{tournament.description}</p>
           <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap', marginTop: 18 }}>
             <span className="tc-meta">
-              <span>🗓️ Starts {formatDate(tournament.start_date)}</span>
-              <span>⏳ Reg closes {formatDate(tournament.registration_deadline)}</span>
+              <span><Icon name="calendar" size={13} /> Starts {formatDate(tournament.start_date)}</span>
+              <span><Icon name="clock" size={13} /> Reg closes {formatDate(tournament.registration_deadline)}</span>
             </span>
             <span className="tc-meta">
-              <span>🛡️ {teamSizeLabel(tournament.team_size)} · {tournament.format === 'single-elimination' ? 'Single elimination' : tournament.format}</span>
-              <span>🏅 {tournament.prize || 'Pride & glory'}</span>
+              <span><Icon name="users" size={13} /> {teamSizeLabel(tournament.team_size)} · {tournament.format === 'single-elimination' ? 'Single elimination' : tournament.format}</span>
+              <span><Icon name="medal" size={13} /> {tournament.prize || 'Pride & glory'}</span>
             </span>
           </div>
         </div>
@@ -91,7 +92,7 @@ export default function TournamentDetail() {
           {/* Champion banner */}
           {tournament.status === 'finished' && championName && (
             <div className="champion-banner rise">
-              <span className="cup" aria-hidden="true">🏆</span>
+              <span className="cup" aria-hidden="true"><Icon name="trophy" size={48} /></span>
               <div>
                 <h3>{championName}</h3>
                 <p>Champions of {tournament.name} — congratulations, Stallions!</p>
@@ -110,7 +111,9 @@ export default function TournamentDetail() {
                 />
               ) : (
                 <div className="card" style={{ padding: '52px 30px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 44, marginBottom: 14 }} aria-hidden="true">🎲</div>
+                  <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: 16, display: 'grid', placeItems: 'center', background: 'var(--blue-soft)', border: '1px solid var(--line-strong)', color: 'var(--blue-bright)' }} aria-hidden="true">
+                    <Icon name="dice" size={28} />
+                  </div>
                   <h3 style={{ fontSize: 22, marginBottom: 10 }}>Bracket not drawn yet</h3>
                   <p style={{ color: 'var(--muted)', maxWidth: 420, margin: '0 auto 24px', fontSize: 14.5 }}>
                     {tournament.status === 'open'
@@ -123,7 +126,7 @@ export default function TournamentDetail() {
                       disabled={busy || registrations.length < 2}
                       onClick={handleGenerate}
                     >
-                      {busy ? <span className="spin" /> : '🎲'} Generate Brackets
+                      {busy ? <span className="spin" /> : <Icon name="dice" size={15} />} Generate Brackets
                     </button>
                   )}
                   {admin && registrations.length < 2 && (
@@ -133,7 +136,7 @@ export default function TournamentDetail() {
                   )}
                   {!admin && tournament.status === 'open' && (
                     <Link to={`/register/${tournament.id}`} className="btn btn-primary btn-sm">
-                      ⚡ Register for this tournament
+                      <Icon name="bolt" size={15} /> Register for this tournament
                     </Link>
                   )}
                 </div>
@@ -207,7 +210,7 @@ export default function TournamentDetail() {
                   className="btn btn-primary"
                   style={{ width: '100%', marginTop: 20 }}
                 >
-                  ⚡ Register Now
+                  <Icon name="bolt" size={15} /> Register Now
                 </Link>
               )}
               {tournament.status === 'open' && registrations.length >= tournament.max_teams && (

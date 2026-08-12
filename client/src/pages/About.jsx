@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
+import Icon from '../components/Icon.jsx';
+import Reveal from '../components/Reveal.jsx';
+import { FACEBOOK_URL } from '../utils.js';
 
 const VALUES = [
-  { title: 'God-Centered & Humane', icon: '🕊️', desc: 'We compete with integrity and respect for every player, teammate, and opponent.' },
-  { title: 'Critical Thinking & Creativity', icon: '🧠', desc: 'Outplays are built on sharp decision-making, adaptation, and creative shot-calling.' },
-  { title: 'Discipline & Competence', icon: '⚔️', desc: 'Practice schedules, game plans, and sportsmanship — we hold ourselves to a standard.' },
-  { title: 'Commitment & Collaboration', icon: '🤝', desc: 'Five players, one goal. Trust and communication win championships.' },
-  { title: 'Resilience & Sustainability', icon: '🌱', desc: 'Comebacks are our specialty — and we build a community that lasts season after season.' },
+  { title: 'God-Centered & Humane', icon: 'heart', desc: 'We compete with integrity and respect for every player, teammate, and opponent.' },
+  { title: 'Critical Thinking & Creativity', icon: 'bulb', desc: 'Outplays are built on sharp decision-making, adaptation, and creative shot-calling.' },
+  { title: 'Discipline & Competence', icon: 'shield', desc: 'Practice schedules, game plans, and sportsmanship — we hold ourselves to a standard.' },
+  { title: 'Commitment & Collaboration', icon: 'users', desc: 'Five players, one goal. Trust and communication win championships.' },
+  { title: 'Resilience & Sustainability', icon: 'leaf', desc: 'Comebacks are our specialty — and we build a community that lasts season after season.' },
 ];
 
 export default function About() {
@@ -39,6 +42,13 @@ export default function About() {
               Representing the blue and gold of Davao Oriental State University — and the rich
               heritage of our province — in every arena we enter.
             </p>
+            <p style={{ color: 'var(--muted)', marginTop: 14 }}>
+              Want to stay in the loop? Follow{' '}
+              <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>
+                DOrSU eSPORTS Community on Facebook
+              </a>{' '}
+              for scrims, updates, and everything happening in the scene.
+            </p>
           </div>
 
           <div style={{ marginTop: 56 }}>
@@ -48,15 +58,33 @@ export default function About() {
                 <h2 className="section-title">Core Values</h2>
               </div>
             </div>
-            <div className="tournament-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
+            <Reveal
+              className="tournament-grid"
+              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}
+            >
               {VALUES.map((v) => (
                 <div key={v.title} className="card hover-lift" style={{ padding: 28 }}>
-                  <div style={{ fontSize: 34, marginBottom: 10 }} aria-hidden="true">{v.icon}</div>
+                  <div
+                    style={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 14,
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: 'linear-gradient(135deg, var(--blue-soft), var(--yellow-soft))',
+                      border: '1px solid var(--line-strong)',
+                      color: 'var(--yellow)',
+                      marginBottom: 14,
+                    }}
+                    aria-hidden="true"
+                  >
+                    <Icon name={v.icon} size={22} />
+                  </div>
                   <h3 style={{ fontSize: 17, marginBottom: 8 }}>{v.title}</h3>
                   <p style={{ color: 'var(--muted)', fontSize: 14 }}>{v.desc}</p>
                 </div>
               ))}
-            </div>
+            </Reveal>
           </div>
 
           <div style={{ textAlign: 'center', marginTop: 64 }}>
@@ -65,7 +93,7 @@ export default function About() {
               Tryouts for the varsity team run every semester. Check the announcements or register
               for an open tournament to get scouted.
             </p>
-            <Link to="/register" className="btn btn-primary">⚡ Register Now</Link>
+            <Link to="/register" className="btn btn-primary"><Icon name="bolt" size={16} /> Register Now</Link>
           </div>
         </div>
       </section>

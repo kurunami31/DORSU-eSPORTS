@@ -28,7 +28,7 @@
   --gold: #ffd21f;
   --font-display: 'Orbitron', sans-serif;
   --font-head: 'Chakra Petch', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-body: 'Sora', sans-serif;
   --radius: 14px;
   --radius-sm: 9px;
   --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.45);
@@ -74,6 +74,17 @@ button {
   cursor: pointer;
 }
 
+:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.icon {
+  vertical-align: -3px;
+  flex-shrink: 0;
+}
+
 ::selection {
   background: var(--blue);
   color: #fff;
@@ -104,6 +115,33 @@ button {
     linear-gradient(rgba(125, 150, 255, 0.055) 1px, transparent 1px),
     linear-gradient(90deg, rgba(125, 150, 255, 0.055) 1px, transparent 1px);
   background-size: 44px 44px;
+}
+
+/* ── Texture: film grain ────────────────────────────────── */
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* ── Reveal-on-scroll ───────────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--rd, 0ms);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
 }
 
 /* ── Layout helpers ─────────────────────────────────────── */
@@ -230,6 +268,23 @@ button {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;
+}
+
+.btn-primary, .btn-blue {
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after, .btn-blue::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-110%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+.btn-primary:hover::after, .btn-blue:hover::after {
+  transform: translateX(110%);
 }
 
 .btn .spin {
@@ -374,25 +429,43 @@ select.input option { background: var(--bg-2); }
   gap: 12px;
   color: #fff;
 }
+.logo-tile {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 0 0 1px rgba(5, 8, 18, 0.6), 0 4px 14px rgba(0, 0, 0, 0.4);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.logo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .logo-mark {
   width: 38px;
   height: 38px;
   filter: drop-shadow(0 0 10px rgba(91, 150, 255, 0.5));
 }
-.logo-text { line-height: 1.05; }
+.logo-text { line-height: 1.1; }
 .logo-text strong {
   font-family: var(--font-display);
-  font-size: 17px;
-  letter-spacing: 0.08em;
+  font-size: 16px;
+  letter-spacing: 0.07em;
   display: block;
   font-weight: 800;
 }
 .logo-text small {
   font-family: var(--font-head);
-  font-size: 10.5px;
-  letter-spacing: 0.42em;
-  color: var(--yellow);
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  color: var(--muted);
   text-transform: uppercase;
+  display: block;
 }
 
 .nav-links {
@@ -409,12 +482,26 @@ select.input option { background: var(--bg-2); }
   letter-spacing: 0.05em;
   padding: 9px 15px;
   border-radius: 9px;
-  transition: color 0.18s ease, background 0.18s ease;
+  position: relative;
+  transition: color 0.18s ease;
 }
-.nav-links a:hover { color: var(--text); background: rgba(125, 150, 255, 0.08); }
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  right: 15px;
+  bottom: 5px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--yellow), var(--blue-bright));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.22s ease;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-links a:hover::after, .nav-links a.active::after { transform: scaleX(1); }
 .nav-links a.active {
   color: var(--yellow);
-  background: var(--yellow-soft);
 }
 .nav-cta { display: flex; align-items: center; gap: 12px; }
 
@@ -652,6 +739,77 @@ select.input option { background: var(--bg-2); }
   border: 1px solid rgba(91, 150, 255, 0.25);
   padding: 5px 12px;
   border-radius: 999px;
+}
+.tc-game img.game-chip-img {
+  height: 20px;
+  width: auto;
+  border-radius: 3px;
+}
+
+/* Game art banner on cards that have a real game logo */
+.tc-banner {
+  position: relative;
+  height: 128px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+.tc-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4, 6, 13, 0.18), rgba(4, 6, 13, 0.88));
+}
+.tc-banner .badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  background: rgba(4, 6, 13, 0.72);
+  backdrop-filter: blur(6px);
+}
+.tc-banner .tc-banner-game {
+  position: absolute;
+  left: 18px;
+  bottom: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #fff;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.tc-banner .tc-banner-game img {
+  height: 26px;
+  width: auto;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
+  border-radius: 4px;
+}
+
+/* Game tile on detail pages (image or icon) */
+.game-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-head);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--blue-bright);
+}
+.game-tile img {
+  height: 22px;
+  width: auto;
+  border-radius: 3px;
 }
 .tc-body { padding: 16px 22px 0; flex: 1; }
 .tc-body h3 {

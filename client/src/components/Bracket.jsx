@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { setWinner } from '../api.js';
+import Icon from './Icon.jsx';
 
 const MATCH_W = 252;
 const MATCH_H = 96; // must match .match-card height in CSS
@@ -93,7 +94,7 @@ export default function Bracket({ bracket, admin = false, onAdvance }) {
             letterSpacing: '0.04em',
           }}
         >
-          ✏️ Admin mode — click a team to record them as the winner and advance the bracket.
+          <Icon name="pencil" size={13} /> Admin mode — click a team to record them as the winner and advance the bracket.
         </p>
       )}
       <div
@@ -139,9 +140,9 @@ export default function Bracket({ bracket, admin = false, onAdvance }) {
                       {isBye ? 'BYE' : props.name || 'TBD'}
                     </span>
                     <span className="t-mark" aria-hidden="true">
-                      {isBye ? '—' : winner ? '' : clickable ? '👑' : ''}
+                      {isBye ? '—' : winner ? '' : clickable ? <Icon name="crown" size={15} /> : ''}
                     </span>
-                    {clickable && <span className="adv-hint">Advance</span>}
+                    {clickable && <span className="adv-hint"><Icon name="arrow" size={12} /> Advance</span>}
                   </div>
                 );
               };

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getTournaments } from '../api.js';
 import TournamentCard from '../components/TournamentCard.jsx';
+import Reveal from '../components/Reveal.jsx';
 
 const TABS = [
   { key: '', label: 'All' },
@@ -69,11 +70,11 @@ export default function Tournaments() {
           ) : filtered.length === 0 ? (
             <div className="empty">No tournaments here yet — check back soon.</div>
           ) : (
-            <div className="tournament-grid">
+            <Reveal className="tournament-grid">
               {filtered.map((t) => (
                 <TournamentCard key={t.id} tournament={t} />
               ))}
-            </div>
+            </Reveal>
           )}
         </div>
       </section>

@@ -1,4 +1,5 @@
 import { formatDateTime } from '../utils.js';
+import Icon from './Icon.jsx';
 
 export default function AnnouncementCard({ announcement }) {
   return (
@@ -6,7 +7,7 @@ export default function AnnouncementCard({ announcement }) {
       <div className="a-top">
         <span className={`a-category ${announcement.category}`}>{announcement.category}</span>
         {announcement.pinned === 1 && (
-          <span className="a-pin">📌 Pinned</span>
+          <span className="a-pin"><Icon name="pin" size={12} /> Pinned</span>
         )}
         <time className="a-date">{formatDateTime(announcement.created_at)}</time>
       </div>

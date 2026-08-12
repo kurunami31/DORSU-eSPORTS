@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getAnnouncements } from '../api.js';
 import AnnouncementCard from '../components/AnnouncementCard.jsx';
+import Reveal from '../components/Reveal.jsx';
 
 const CATEGORIES = ['All', 'Tournament', 'General', 'Community', 'Patch'];
 
@@ -52,11 +53,11 @@ export default function Announcements() {
           ) : filtered.length === 0 ? (
             <div className="empty">No announcements in this category.</div>
           ) : (
-            <div className="announcement-list">
+            <Reveal className="announcement-list">
               {filtered.map((a) => (
                 <AnnouncementCard key={a.id} announcement={a} />
               ))}
-            </div>
+            </Reveal>
           )}
         </div>
       </section>

@@ -90,6 +90,20 @@ export async function runSeed() {
     registration_deadline: dateOffset(3),
   });
 
+  const codmOpen = await insertTournament({
+    name: 'Ranked Rush: CODM Invitational',
+    game: 'Call of Duty: Mobile',
+    description:
+      'Fast-paced 5v5 action in Call of Duty: Mobile. Climb the bracket with your squad — top teams take home a ₱1,500 prize pool and bragging rights on campus.',
+    format: 'single-elimination',
+    team_size: 5,
+    max_teams: 16,
+    prize: '₱1,500 prize pool + champion banner',
+    status: 'open',
+    start_date: dateOffset(9),
+    registration_deadline: dateOffset(4),
+  });
+
   const mlbbFinished = await insertTournament({
     name: 'Intramurals Showdown 2025',
     game: 'Mobile Legends: Bang Bang',
@@ -131,6 +145,20 @@ export async function runSeed() {
     await insertRegistration(valorantOpen, name, captain, email, [
       { name: captain, tag: 'cap_' + name.toLowerCase().replace(/[^a-z0-9]/g, '') },
     ]);
+  }
+
+  for (const [name, captain] of [
+    ['Delta Unit', 'Karlo Bautista'],
+    ['Ghost Squad PH', 'Ivy Manalo'],
+    ['Rapid Fire', 'Jomar Salcedo'],
+    ['SnD Specialists', 'Camille Ocampo'],
+    ['Hardpoint Heroes', 'Dexter Cabrera'],
+  ]) {
+    await insertRegistration(
+      codmOpen, name, captain,
+      `${captain.toLowerCase().replace(/\s+/g, '.')}@dorsu.edu.ph`,
+      [{ name: captain, tag: name.toLowerCase().replace(/[^a-z0-9]/g, '') }]
+    );
   }
 
   for (const [name, captain] of [

@@ -1,21 +1,37 @@
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge.jsx';
-import GameGlyph from './GameGlyph.jsx';
-import { formatDate, teamSizeLabel } from '../utils.js';
+import Icon from './Icon.jsx';
+import { gameGlyph, formatDate, teamSizeLabel } from '../utils.js';
 
 export default function TournamentCard({ tournament }) {
-  const pct = Math.min(
-    100,
-    Math.round((tournament.registered_count / tournament.max_teams) * 100)
-  );
+  const g = gameGlyph(tournament.game);
+  const pct = Math.min(100, Math.round((tournament.registered_count / tournament.max_teams) * 100));
   const full = tournament.registered_count >= tournament.max_teams;
 
   return (
     <article className="card tournament-card hover-lift rise">
-      <div className="tc-top">
-        <GameGlyph game={tournament.game} />
-        <StatusBadge status={tournament.status} />
-      </div>
+      {g.image ? (
+        <div
+          className="tc-banner"
+          style={{ backgroundImage: `url(${g.image})` }}
+          role="img"
+          aria-label={`${tournament.game} banner`}
+        >
+          <StatusBadge status={tournament.status} />
+          <span className="tc-banner-game">
+            <img src={g.image} alt="" />
+            {tournament.game}
+          </span>
+        </div>
+      ) : (
+        <div className="tc-top">
+          <span className="tc-game">
+            <Icon name={g.icon} size={15} />
+            {tournament.game}
+          </span>
+          <StatusBadge status={tournament.status} />
+        </div>
+      )}
 
       <div className="tc-body">
         <h3>{tournament.name}</h3>
@@ -37,16 +53,10 @@ export default function TournamentCard({ tournament }) {
       <div className="tc-foot">
         <div className="tc-meta">
           <span>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
-            Starts {formatDate(tournament.start_date)}
+            <Icon name="calendar" size={13} /> Starts {formatDate(tournament.start_date)}
           </span>
           <span>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z" />
-            </svg>
-            {tournament.prize || 'Pride & glory'}
+            <Icon name="trophy" size={13} /> {tournament.prize || 'Pride & glory'}
           </span>
         </div>
         <Link to={`/tournaments/${tournament.id}`} className="btn btn-blue btn-sm">

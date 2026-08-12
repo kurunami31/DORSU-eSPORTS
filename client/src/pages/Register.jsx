@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getTournaments, getTournament, registerTeam } from '../api.js';
+import Icon from '../components/Icon.jsx';
 import { formatDate, teamSizeLabel } from '../utils.js';
 
 const EMPTY_ROSTER = () => [{ name: '', tag: '' }];
@@ -67,7 +68,9 @@ export default function Register() {
       <section className="section" style={{ minHeight: '70vh', display: 'grid', placeItems: 'center' }}>
         <div className="container">
           <div className="card" style={{ maxWidth: 560, margin: '0 auto', padding: 44, textAlign: 'center' }}>
-            <div style={{ fontSize: 58, marginBottom: 12 }} aria-hidden="true">🎉</div>
+            <div style={{ width: 64, height: 64, margin: '0 auto 16px', borderRadius: 20, display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg, var(--green-soft), var(--blue-soft))', border: '1px solid rgba(47, 214, 127, 0.3)', color: 'var(--green)' }} aria-hidden="true">
+              <Icon name="sparkles" size={30} />
+            </div>
             <h2 style={{ fontSize: 30, marginBottom: 10 }}>You're in, {done.team_name}!</h2>
             <p style={{ color: 'var(--muted)', marginBottom: 26 }}>
               Your team has been registered for <b style={{ color: 'var(--text)' }}>{tournament?.name}</b>.
@@ -100,7 +103,9 @@ export default function Register() {
         <div className="container">
           {tournamentId && tournament && tournament.status !== 'open' && (
             <div className="card" style={{ maxWidth: 620, margin: '0 auto', padding: 30, textAlign: 'center' }}>
-              <div style={{ fontSize: 40, marginBottom: 10 }} aria-hidden="true">🔒</div>
+              <div style={{ width: 56, height: 56, margin: '0 auto 14px', borderRadius: 16, display: 'grid', placeItems: 'center', background: 'var(--yellow-soft)', border: '1px solid rgba(255,198,26,0.3)', color: 'var(--yellow)' }} aria-hidden="true">
+                <Icon name="lock" size={26} />
+              </div>
               <h2 style={{ fontSize: 22, marginBottom: 10 }}>Registration closed</h2>
               <p style={{ color: 'var(--muted)', marginBottom: 22 }}>
                 {tournament.name} is currently <b style={{ color: 'var(--text)' }}>{tournament.status}</b> —
@@ -219,7 +224,7 @@ export default function Register() {
                       onClick={() => removeRow(i)}
                       aria-label={`Remove player ${i + 1}`}
                     >
-                      ✕
+                      <Icon name="x" size={14} />
                     </button>
                   </div>
                 ))}
@@ -235,7 +240,7 @@ export default function Register() {
               style={{ width: '100%' }}
               disabled={busy || !selected}
             >
-              {busy ? <span className="spin" /> : '⚡'} Lock In Registration
+              {busy ? <span className="spin" /> : <Icon name="bolt" size={15} />} Lock In Registration
             </button>
             <p style={{ color: 'var(--muted-2)', fontSize: 12.5, textAlign: 'center', marginTop: 14 }}>
               Slots are first-come, first-served. Duplicate team names are not allowed.
