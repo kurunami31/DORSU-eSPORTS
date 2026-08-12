@@ -5,6 +5,8 @@ import rateLimit from 'express-rate-limit';
 import { requireStaff, isStaff, asyncHandler, errorHandler, notFound } from './middleware.js';
 import { maintenanceEnabled, maintenanceMessage } from './maintenance.js';
 import tournamentsRouter from './routes/tournaments.js';
+import gamesRouter from './routes/games.js';
+import leaderboardRouter from './routes/leaderboard.js';
 import registrationsRouter from './routes/registrations.js';
 import matchesRouter from './routes/matches.js';
 import announcementsRouter from './routes/announcements.js';
@@ -162,6 +164,8 @@ app.get('/api/maintenance', asyncHandler(async (req, res) =>
 ));
 app.get('/api/admin/check', requireStaff, (req, res) => res.json({ ok: true }));
 app.use('/api/stats', statsRouter);
+app.use('/api/games', gamesRouter);
+app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api', registrationsRouter);
 app.use('/api', matchesRouter);

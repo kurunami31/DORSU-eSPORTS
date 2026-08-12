@@ -65,6 +65,15 @@ export function gameBannerGradient(game) {
   return TINT_GRADIENTS[g.tint] || TINT_GRADIENTS.blue;
 }
 
+// "Mobile Legends: Bang Bang" -> "mobile-legends-bang-bang" — used for the
+// /games/:slug hub routes and the games index cards.
+export function gameSlug(game) {
+  return game
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 export const FACEBOOK_URL = 'https://www.facebook.com/dorsuesportscommunity';
 
 /**

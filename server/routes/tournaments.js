@@ -83,12 +83,23 @@ function validateTournamentInput(body, { partial = false } = {}) {
   return out;
 }
 
-// List tournaments
+// List tournaments — optional ?status= and ?game= filters
 router.get('/', asyncHandler(async (req, res) => {
-  const { status } = req.query;
-  const rows = status
-    ? await db.all(`SELECT ${PUBLIC_FIELDS} FROM tournaments WHERE status = ? ORDER BY created_at DESC`, [status])
-    : await db.all(`SELECT ${PUBLIC_FIELDS} FROM tournaments ORDER BY created_at DESC`);
+  const { status, game } = req.query;
+  const where = [];
+  const params = [];
+  if (status) {
+    where.push('status = ?');
+    params.push(status);
+  }
+  if (game) {
+    where.push('game = ?');
+    params.push(game);
+  }
+  const rows = await db.all(
+    `SELECT ${PUBLIC_FIELDS} FROM tournaments${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY created_at DESC`,
+    params
+  );
   res.json(await withCounts(rows));
 }));
 

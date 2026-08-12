@@ -29,6 +29,8 @@ export default function Footer() {
             <ul>
               <li><Link to="/">Home</Link></li>
               <li><Link to="/tournaments">Tournaments</Link></li>
+              <li><Link to="/games">Game Hubs</Link></li>
+              <li><Link to="/leaderboard">Leaderboard</Link></li>
               <li><Link to="/announcements">Announcements</Link></li>
               <li><Link to="/about">About Us</Link></li>
             </ul>

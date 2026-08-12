@@ -348,6 +348,60 @@ async function req(path, opts = {}) {
   console.log('4. Unknown route → 404 JSON');
   check('404', (await req('/api/definitely-not-a-route')).status === 404);
 
+  console.log('5. Game hubs + leaderboard (public reads)');
+  const games = await req('/api/games');
+  check('games index 200', games.status === 200);
+  check(
+    'games rows have aggregates + champions array',
+    Array.isArray(games.body) &&
+      games.body.length > 0 &&
+      'game' in games.body[0] &&
+      'tournaments' in games.body[0] &&
+      'open_count' in games.body[0] &&
+      'entrants' in games.body[0] &&
+      Array.isArray(games.body[0].champions),
+    JSON.stringify(Object.keys(games.body[0] || {}))
+  );
+  check('games include a seeded title', games.body.some((g) => g.game === 'Mobile Legends: Bang Bang'));
+
+  const lb = await req('/api/leaderboard');
+  check('leaderboard 200', lb.status === 200);
+  check(
+    'leaderboard rows have standings fields',
+    Array.isArray(lb.body) &&
+      lb.body.every(
+        (r) =>
+          'team_name' in r &&
+          'game' in r &&
+          'played' in r &&
+          'wins' in r &&
+          'titles' in r &&
+          'win_rate' in r &&
+          typeof r.win_rate === 'number'
+      )
+  );
+  check('leaderboard sorted by titles then wins', (() => {
+    for (let i = 1; i < lb.body.length; i++) {
+      const a = lb.body[i - 1];
+      const b = lb.body[i];
+      if (a.titles < b.titles) return false;
+      if (a.titles === b.titles && a.wins < b.wins) return false;
+    }
+    return true;
+  })());
+  const lbLim = await req('/api/leaderboard?limit=3');
+  check('leaderboard limit honored', lbLim.status === 200 && lbLim.body.length <= 3);
+  check('leaderboard bad limit → 400', (await req('/api/leaderboard?limit=abc')).status === 400);
+  check(
+    'leaderboard unknown game → empty',
+    (await req('/api/leaderboard?game=' + encodeURIComponent('No Such Game'))).body.length === 0
+  );
+  const byGame = await req('/api/tournaments?game=' + encodeURIComponent('Valorant'));
+  check(
+    'tournaments filtered by game',
+    byGame.status === 200 && byGame.body.length > 0 && byGame.body.every((t) => t.game === 'Valorant')
+  );
+
   console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => {

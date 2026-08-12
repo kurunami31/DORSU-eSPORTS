@@ -7,6 +7,8 @@ import { useAuth } from '../auth.jsx';
 const LINKS = [
   { to: '/', label: 'Home' },
   { to: '/tournaments', label: 'Tournaments' },
+  { to: '/games', label: 'Games' },
+  { to: '/leaderboard', label: 'Leaderboard' },
   { to: '/announcements', label: 'Announcements' },
   { to: '/about', label: 'About' },
 ];

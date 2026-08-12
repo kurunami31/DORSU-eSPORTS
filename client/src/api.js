@@ -34,7 +34,21 @@ export async function api(path, options = {}) {
 
 export const getStats = () => api('/stats');
 export const getMaintenance = () => api('/maintenance');
-export const getTournaments = (status) => api(`/tournaments${status ? `?status=${status}` : ''}`);
+export const getGames = () => api('/games');
+export const getLeaderboard = ({ game, limit } = {}) => {
+  const q = new URLSearchParams();
+  if (game) q.set('game', game);
+  if (limit) q.set('limit', String(limit));
+  const s = q.toString();
+  return api(`/leaderboard${s ? `?${s}` : ''}`);
+};
+export const getTournaments = (status, game) => {
+  const q = new URLSearchParams();
+  if (status) q.set('status', status);
+  if (game) q.set('game', game);
+  const s = q.toString();
+  return api(`/tournaments${s ? `?${s}` : ''}`);
+};
 export const getTournament = (id) => api(`/tournaments/${id}`);
 export const getBracket = (id) => api(`/tournaments/${id}/bracket`);
 export const getRegistrations = (tournamentId) => api(`/tournaments/${tournamentId}/registrations`);

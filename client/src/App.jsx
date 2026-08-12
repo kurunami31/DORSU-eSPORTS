@@ -7,6 +7,9 @@ import WelcomeGate from './components/WelcomeGate.jsx';
 import Home from './pages/Home.jsx';
 import Tournaments from './pages/Tournaments.jsx';
 import TournamentDetail from './pages/TournamentDetail.jsx';
+import Games from './pages/Games.jsx';
+import GameHub from './pages/GameHub.jsx';
+import Leaderboard from './pages/Leaderboard.jsx';
 import Register from './pages/Register.jsx';
 import Announcements from './pages/Announcements.jsx';
 import About from './pages/About.jsx';
@@ -104,6 +107,9 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournaments/:id" element={<TournamentDetail />} />
+          <Route path="/games" element={<Games />} />
+          <Route path="/games/:slug" element={<GameHub />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/register" element={<Register />} />
           <Route path="/register/:tournamentId" element={<Register />} />
           <Route path="/announcements" element={<Announcements />} />
