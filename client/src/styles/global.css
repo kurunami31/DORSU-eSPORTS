@@ -792,10 +792,15 @@ select.input option { background: var(--bg-2); }
 .footer p, .footer a, .footer li {
   color: var(--muted);
   font-size: 14px;
+  /* long tokens (e.g. the email) must wrap, never paint past the border */
+  overflow-wrap: anywhere;
 }
 .footer ul { list-style: none; }
 .footer ul li { margin-bottom: 10px; }
 .footer a:hover { color: var(--blue-bright); }
+/* Let grid tracks shrink to 1fr instead of being forced wide by content
+   min-width (which used to push the Contact column past the container edge) */
+.footer-grid > * { min-width: 0; }
 .footer-bottom {
   border-top: 1px solid var(--line);
   padding-top: 22px;
@@ -810,6 +815,12 @@ select.input option { background: var(--bg-2); }
 
 @media (max-width: 800px) {
   .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+/* Two columns get too cramped below ~560px — collapse to one so long
+   contact lines (email, campus, community link) never touch the border */
+@media (max-width: 560px) {
+  .footer-grid { grid-template-columns: 1fr; }
+  .footer { padding-bottom: calc(30px + env(safe-area-inset-bottom)); }
 }
 
 /* ── Hero ───────────────────────────────────────────────── */
