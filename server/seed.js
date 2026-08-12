@@ -40,6 +40,8 @@ async function insertAnnouncement(title, body, category, pinned = 0, daysAgo = 0
 
 export async function runSeed() {
   await db.exec(`
+    DROP TABLE IF EXISTS sessions;
+    DROP TABLE IF EXISTS users;
     DROP TABLE IF EXISTS matches;
     DROP TABLE IF EXISTS registrations;
     DROP TABLE IF EXISTS announcements;

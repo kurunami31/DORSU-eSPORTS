@@ -8,6 +8,7 @@ import registrationsRouter from './routes/registrations.js';
 import matchesRouter from './routes/matches.js';
 import announcementsRouter from './routes/announcements.js';
 import statsRouter from './routes/stats.js';
+import authRouter from './routes/auth.js';
 
 const app = express();
 
@@ -95,8 +96,21 @@ const writeLimiter = rateLimit({
   message: json429,
 });
 
+// Auth brute-force surface — signup/login/logout are throttled per IP.
+// GETs (e.g. /auth/me, called on every page load) are exempt so an active
+// user can never be locked out by browsing.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: json429,
+  skip: (req) => req.method === 'GET',
+});
+
 app.use('/api', apiLimiter);
 app.use('/api/admin', adminLimiter);
+app.use('/api/auth', authLimiter);
 app.use('/api/tournaments/:tournamentId/registrations', registerLimiter);
 app.use('/api', (req, res, next) => {
   if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE' || req.method === 'PUT') {
@@ -113,6 +127,7 @@ app.use('/api/tournaments', tournamentsRouter);
 app.use('/api', registrationsRouter);
 app.use('/api', matchesRouter);
 app.use('/api/announcements', announcementsRouter);
+app.use('/api/auth', authRouter);
 
 app.use(notFound);
 app.use(errorHandler);

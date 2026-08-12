@@ -70,8 +70,28 @@ const SCHEMA = `
     UNIQUE(tournament_id, round, position)
   );
 
+  -- Player accounts (login / signup)
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+
+  -- Bearer sessions: only a SHA-256 hash of the token is stored, so a DB
+  -- leak never exposes live session tokens.
+  CREATE TABLE IF NOT EXISTS sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_name
     ON registrations (tournament_id, LOWER(team_name));
 
@@ -86,6 +106,8 @@ const SCHEMA = `
   ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
   ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
   ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 
   REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated, service_role;
   REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated, service_role;

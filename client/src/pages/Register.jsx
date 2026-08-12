@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getTournaments, getTournament, registerTeam } from '../api.js';
+import { useAuth } from '../auth.jsx';
 import Icon from '../components/Icon.jsx';
 import { formatDate, teamSizeLabel } from '../utils.js';
 
@@ -8,6 +9,7 @@ const EMPTY_ROSTER = () => [{ name: '', tag: '' }];
 
 export default function Register() {
   const { tournamentId } = useParams();
+  const { user } = useAuth();
 
   const [tournaments, setTournaments] = useState([]);
   const [selected, setSelected] = useState(tournamentId ? Number(tournamentId) : '');
@@ -19,6 +21,17 @@ export default function Register() {
     email: '',
     contact: '',
   });
+
+  // Prefill captain + email from the signed-in account (still editable).
+  useEffect(() => {
+    if (user) {
+      setForm((f) => ({
+        ...f,
+        captain_name: f.captain_name || user.name || '',
+        email: f.email || user.email || '',
+      }));
+    }
+  }, [user]);
   const [roster, setRoster] = useState(EMPTY_ROSTER);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

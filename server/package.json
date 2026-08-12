@@ -10,7 +10,8 @@
     "dev": "node --watch index.js",
     "start": "node index.js",
     "seed": "node seed.js",
-    "test:security": "node security-test.cjs"
+    "test:security": "node security-test.cjs",
+    "test:auth": "node auth-test.cjs"
   },
   "dependencies": {
     "cors": "^2.8.5",

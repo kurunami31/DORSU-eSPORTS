@@ -9,6 +9,7 @@ import Register from './pages/Register.jsx';
 import Announcements from './pages/Announcements.jsx';
 import About from './pages/About.jsx';
 import Admin from './pages/Admin.jsx';
+import Auth from './pages/Auth.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 function ScrollToTop() {
@@ -33,6 +34,8 @@ export default function App() {
           <Route path="/register/:tournamentId" element={<Register />} />
           <Route path="/announcements" element={<Announcements />} />
           <Route path="/about" element={<About />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/signup" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

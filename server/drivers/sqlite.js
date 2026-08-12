@@ -65,8 +65,28 @@ const SCHEMA = `
     UNIQUE(tournament_id, round, position)
   );
 
+  -- Player accounts (login / signup)
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Bearer sessions: only a SHA-256 hash of the token is stored, so a DB
+  -- leak never exposes live session tokens.
+  CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_name
     ON registrations(tournament_id, LOWER(team_name));
 `;

@@ -9,10 +9,21 @@ export function setAdminKey(key) {
   else sessionStorage.removeItem('dorsu_admin_key');
 }
 
+export function getToken() {
+  return localStorage.getItem('dorsu_user_token') || '';
+}
+
+export function setToken(token) {
+  if (token) localStorage.setItem('dorsu_user_token', token);
+  else localStorage.removeItem('dorsu_user_token');
+}
+
 export async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const key = getAdminKey();
   if (key) headers['x-admin-key'] = key;
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (res.status === 204) return null;

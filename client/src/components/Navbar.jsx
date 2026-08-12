@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import Logo from './Logo.jsx';
 import Icon from './Icon.jsx';
+import { useAuth } from '../auth.jsx';
 
 const LINKS = [
   { to: '/', label: 'Home' },
@@ -12,6 +13,7 @@ const LINKS = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const { user, ready } = useAuth();
 
   return (
     <header className="navbar">
@@ -31,12 +33,32 @@ export default function Navbar() {
                 </NavLink>
               </li>
             ))}
+            {ready && (
+              <li className={user ? 'nav-link-user' : 'nav-link-user nav-link-mobile-only'}>
+                <NavLink
+                  to="/login"
+                  className={({ isActive }) => (isActive ? 'active' : '')}
+                  onClick={() => setOpen(false)}
+                >
+                  {user ? 'My Account' : 'Sign In'}
+                </NavLink>
+              </li>
+            )}
           </ul>
         </nav>
         <div className="nav-cta">
-          <Link to="/tournaments" className="btn btn-ghost btn-sm">
-            Brackets
-          </Link>
+          {user ? (
+            <Link to="/login" className="nav-user" title="My account">
+              <span className="nav-user-avatar" aria-hidden="true">
+                {(user.name || '?').trim().charAt(0).toUpperCase()}
+              </span>
+              <span className="nav-user-name">{user.name.split(' ')[0]}</span>
+            </Link>
+          ) : ready ? (
+            <Link to="/login" className="btn btn-ghost btn-sm">
+              <Icon name="lockOpen" size={14} /> Sign In
+            </Link>
+          ) : null}
           <Link to="/register" className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>
             <Icon name="bolt" size={15} /> Register
           </Link>
