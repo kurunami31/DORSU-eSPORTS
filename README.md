@@ -5,7 +5,7 @@ The official competitive gaming website for **Davao Oriental State University**'
 ## ✨ Features
 
 - **Tournament matching** — one-click single-elimination bracket generation with random draws, auto-byes for odd team counts, winner propagation between rounds, and automatic champion crowning
-- **Registrations** — public team sign-up with captain info and roster builder; slot limits, registration deadlines, and duplicate team-name checks are enforced server-side (transactionally)
+- **Registrations** — enter as a **solo player** (in-game tag, individual entry) or as a **full team** with captain info and roster builder; slot limits, registration deadlines, and duplicate name checks are enforced server-side (transactionally)
 - **Announcements** — categorized feed (Tournament / General / Community / Patch) with pinned posts
 - **Player accounts** — sign up / sign in at **/login**; scrypt-hashed passwords, 30-day bearer sessions, and one-tap prefilled team registration
 - **AI assistant** — a floating **DOrSU eSPORTS Assist** chat widget (bottom-right) answers visitors about open tournaments, registration, and the org — powered by **Groq** (Llama 3.3 70B), grounded in live site data, rate-limited, and safe for the public (no staff/internal details)

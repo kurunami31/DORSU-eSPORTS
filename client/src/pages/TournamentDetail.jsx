@@ -196,10 +196,13 @@ export default function TournamentDetail() {
                         {i + 1}
                       </span>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {r.team_name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.team_name}</span>
+                          {r.entry_type === 'solo' && <span className="entry-solo">Solo</span>}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--muted-2)' }}>Captain: {r.captain_name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted-2)' }}>
+                          {r.entry_type === 'solo' ? 'Player' : 'Captain'}: {r.captain_name}
+                        </div>
                       </div>
                     </li>
                   ))}

@@ -6,7 +6,7 @@ import { ValidationError, requiredStr, validEmail, parseRoster } from '../valida
 const router = Router();
 
 // Fields shown to the public. Email/contact/roster are private — admin only.
-const PUBLIC_FIELDS = 'id, tournament_id, team_name, captain_name, created_at';
+const PUBLIC_FIELDS = 'id, tournament_id, team_name, captain_name, entry_type, created_at';
 
 // List registrations for a tournament
 router.get('/tournaments/:tournamentId/registrations', asyncHandler(async (req, res) => {
@@ -29,8 +29,23 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
   const tournament = await db.get('SELECT * FROM tournaments WHERE id = ?', [req.params.tournamentId]);
   if (!tournament) return res.status(404).json({ error: 'Tournament not found' });
 
-  const teamName = requiredStr(req.body.team_name, { name: 'Team name', min: 2, max: 50 });
-  const captain = requiredStr(req.body.captain_name, { name: 'Captain name', min: 2, max: 60 });
+  const entryType = String(req.body.entry_type || 'team').trim().toLowerCase();
+  if (entryType !== 'team' && entryType !== 'solo') {
+    throw new ValidationError('Registration type must be team or solo.');
+  }
+
+  // Solo = one individual taking a slot. 'team_name' carries their in-game
+  // tag/ID and the roster is exactly one entry (the player themself).
+  const teamName = requiredStr(req.body.team_name, {
+    name: entryType === 'solo' ? 'In-game tag' : 'Team name',
+    min: 2,
+    max: 50,
+  });
+  const captain = requiredStr(req.body.captain_name, {
+    name: entryType === 'solo' ? 'Player name' : 'Captain name',
+    min: 2,
+    max: 60,
+  });
   const email = validEmail(req.body.email);
   const contact = req.body.contact === undefined || req.body.contact === null
     ? ''
@@ -39,7 +54,9 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
   const maxRoster = tournament.team_size > 1
     ? Math.max(tournament.team_size * 2, tournament.team_size + 3)
     : 1;
-  const roster = parseRoster(req.body.roster, { maxEntries: maxRoster });
+  const roster = entryType === 'solo'
+    ? [{ name: captain, tag: teamName }]
+    : parseRoster(req.body.roster, { maxEntries: maxRoster });
 
   if (tournament.status !== 'open') {
     return res.status(400).json({ error: 'Registration for this tournament is closed.' });
@@ -59,8 +76,8 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
   try {
     saved = await db.withTransaction(async (tx) => {
       const result = await tx.run(
-        `INSERT INTO registrations (tournament_id, team_name, captain_name, email, contact, roster, status)
-         SELECT ?, ?, ?, ?, ?, ?, 'confirmed'
+        `INSERT INTO registrations (tournament_id, team_name, captain_name, email, contact, roster, status, entry_type)
+         SELECT ?, ?, ?, ?, ?, ?, 'confirmed', ?
          WHERE (SELECT COUNT(*) FROM registrations WHERE tournament_id = ? AND status = 'confirmed')
                < (SELECT max_teams FROM tournaments WHERE id = ?)`,
         [
@@ -70,6 +87,7 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
           email,
           contact,
           JSON.stringify(roster),
+          entryType,
           tournament.id,
           tournament.id,
         ]
@@ -83,7 +101,12 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.message });
     if (err.message && /UNIQUE|duplicate key/i.test(err.message)) {
-      return res.status(400).json({ error: 'That team name is already taken for this tournament.' });
+      // Teams dedupe by name; solo entries dedupe by email.
+      return res.status(400).json({
+        error: entryType === 'solo'
+          ? 'You are already registered for this tournament.'
+          : 'That team name is already taken for this tournament.',
+      });
     }
     throw err;
   }

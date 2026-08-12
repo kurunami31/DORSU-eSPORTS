@@ -15,7 +15,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
   max: 1,
   idleTimeoutMillis: 10_000,
-  connectionTimeoutMillis: 5_000,
+  connectionTimeoutMillis: 15_000,
 });
 
 const SCHEMA = `
@@ -44,6 +44,8 @@ const SCHEMA = `
     contact TEXT NOT NULL DEFAULT '',
     roster TEXT NOT NULL DEFAULT '[]',
     status TEXT NOT NULL DEFAULT 'confirmed',
+    -- 'team' (multi-player) or 'solo' (individual entry)
+    entry_type TEXT NOT NULL DEFAULT 'team',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 
@@ -70,7 +72,7 @@ const SCHEMA = `
     UNIQUE(tournament_id, round, position)
   );
 
-  -- Player accounts (login / signup). role: 'player' | 'admin' (super admin).
+  -- Player accounts (login / signup). role: 'player' | 'moderator' | 'admin' (super admin).
   CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -100,12 +102,20 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_name
-    ON registrations (tournament_id, LOWER(team_name));
 
-  -- Migration for databases created before the role/username columns existed.
+  -- Uniqueness is entry-type aware: teams dedupe by name; solo players dedupe
+  -- by email, because two different individuals may legitimately share a name.
+  -- (Drops the old unconditional name index so it can't block same-name solos.)
+  DROP INDEX IF EXISTS idx_reg_unique_name;
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_team_name
+    ON registrations (tournament_id, LOWER(team_name)) WHERE entry_type = 'team';
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_solo_email
+    ON registrations (tournament_id, LOWER(email)) WHERE entry_type = 'solo';
+
+  -- Migrations for databases created before these columns existed.
   ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
   ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'player';
+  ALTER TABLE registrations ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'team';
 
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (LOWER(username));
 

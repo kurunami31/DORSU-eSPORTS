@@ -130,6 +130,43 @@ async function req(path, opts = {}) {
     method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ role: 'player' }),
   })).status === 200);
 
+  console.log('1e. Solo registration — individual entries');
+  const soloReg = await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({
+      entry_type: 'solo',
+      team_name: `SoloTag${Date.now()}`,
+      captain_name: 'Solo Star',
+      email: `solo${Date.now()}@dorsu.edu.ph`,
+    }),
+  });
+  check('solo registration 201', soloReg.status === 201);
+  check('solo stored with entry_type solo', soloReg.body && soloReg.body.entry_type === 'solo');
+  check('solo roster is the player themself', soloReg.body && Array.isArray(soloReg.body.roster) && soloReg.body.roster.length === 1 && soloReg.body.roster[0].tag === soloReg.body.team_name);
+  check('solo entry visible in public list', (await req('/api/tournaments/2/registrations')).body.some((r) => r.id === soloReg.body.id && r.entry_type === 'solo'));
+  check('invalid entry_type rejected 400', (await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({ entry_type: 'squads', team_name: 'X', captain_name: 'Y', email: 'a@b.c' }),
+  })).status === 400);
+  // Solo dedupe is by email, NOT name — two different players may share a name.
+  const sameName = `SoloTag${Date.now()}`;
+  const soloA = await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({ entry_type: 'solo', team_name: sameName, captain_name: 'Solo A', email: `soloA${Date.now()}@dorsu.edu.ph` }),
+  });
+  check('first solo registers 201', soloA.status === 201);
+  check('second solo with same name registers 201 (email-dedupe)', (await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({ entry_type: 'solo', team_name: sameName, captain_name: 'Solo B', email: `soloB${Date.now()}@dorsu.edu.ph` }),
+  })).status === 201);
+  check('duplicate solo email rejected 400', (await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({ entry_type: 'solo', team_name: `SoloTag${Date.now()}`, captain_name: 'Solo A2', email: soloA.body ? soloA.body.email : 'x@dorsu.edu.ph' }),
+  })).status === 400);
+  check('solo entry removed (admin)', (await req(`/api/registrations/${soloReg.body ? soloReg.body.id : 0}`, {
+    method: 'DELETE', headers: adminHeaders,
+  })).status === 200);
+
   console.log('2. Input validation — 400s');
   const longTeam = 'T'.repeat(60);
   check(

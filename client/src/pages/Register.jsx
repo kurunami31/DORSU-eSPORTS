@@ -14,6 +14,7 @@ export default function Register() {
   const [tournaments, setTournaments] = useState([]);
   const [selected, setSelected] = useState(tournamentId ? Number(tournamentId) : '');
   const [tournament, setTournament] = useState(null);
+  const [mode, setMode] = useState('team'); // 'team' | 'solo'
 
   const [form, setForm] = useState({
     team_name: '',
@@ -49,9 +50,25 @@ export default function Register() {
       return;
     }
     getTournament(selected)
-      .then(setTournament)
+      .then((t) => {
+        setTournament(t);
+        // Solo (1v1) tournaments register individuals by default.
+        setMode(t.team_size === 1 ? 'solo' : 'team');
+      })
       .catch(() => {});
   }, [selected]);
+
+  // 1v1 tournaments accept individuals only — the toggle stays locked on solo.
+  const soloOnly = tournament ? tournament.team_size === 1 : false;
+
+  // Switching to solo with a signed-in username? Offer their tag as the entry.
+  const switchMode = (next) => {
+    if (next === 'team' && soloOnly) return;
+    setMode(next);
+    if (next === 'solo' && !form.team_name.trim() && user?.username) {
+      setForm((f) => ({ ...f, team_name: user.username }));
+    }
+  };
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -67,7 +84,11 @@ export default function Register() {
     setBusy(true);
     try {
       const cleanRoster = roster.filter((p) => p.name.trim() || p.tag.trim());
-      const res = await registerTeam(selected, { ...form, roster: cleanRoster });
+      const res = await registerTeam(selected, {
+        ...form,
+        entry_type: mode,
+        roster: mode === 'solo' ? [] : cleanRoster,
+      });
       setDone(res);
     } catch (err) {
       setError(err.message);
@@ -77,6 +98,7 @@ export default function Register() {
   };
 
   if (done) {
+    const isSolo = done.entry_type === 'solo';
     return (
       <section className="section" style={{ minHeight: '70vh', display: 'grid', placeItems: 'center' }}>
         <div className="container">
@@ -86,7 +108,10 @@ export default function Register() {
             </div>
             <h2 style={{ fontSize: 30, marginBottom: 10 }}>You're in, {done.team_name}!</h2>
             <p style={{ color: 'var(--muted)', marginBottom: 26 }}>
-              Your team has been registered for <b style={{ color: 'var(--text)' }}>{tournament?.name}</b>.
+              {isSolo
+                ? `You're registered as a solo entry for `
+                : 'Your team has been registered for '}
+              <b style={{ color: 'var(--text)' }}>{tournament?.name}</b>.
               Watch the announcements for matchup details and bracket reveals.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -104,10 +129,10 @@ export default function Register() {
       <section className="page-hero">
         <div className="container">
           <span className="eyebrow">Sign Up</span>
-          <h1>Register a Team</h1>
+          <h1>Register for a Tournament</h1>
           <p>
-            Claim a slot in an open DOrSU eSPORTS tournament. Fill in your captain details and roster —
-            the arena is waiting.
+            Claim a slot in an open DOrSU eSPORTS tournament — as a full squad or as a solo player.
+            Slots are first-come, first-served.
           </p>
         </div>
       </section>
@@ -163,20 +188,41 @@ export default function Register() {
               </div>
             )}
 
+            {tournament && (
+              <div className="auth-tabs" role="group" aria-label="Registration type" style={{ marginBottom: 22 }}>
+                <button
+                  type="button"
+                  className={`auth-tab ${mode === 'team' ? 'active' : ''}`}
+                  onClick={() => switchMode('team')}
+                  disabled={soloOnly}
+                  title={soloOnly ? 'This is a 1v1 tournament — solo entries only' : undefined}
+                >
+                  <Icon name="users" size={15} /> Register as a Team
+                </button>
+                <button
+                  type="button"
+                  className={`auth-tab ${mode === 'solo' ? 'active' : ''}`}
+                  onClick={() => switchMode('solo')}
+                >
+                  <Icon name="gamepad" size={15} /> Register Solo
+                </button>
+              </div>
+            )}
+
             <div className="form-grid">
               <div className="field">
-                <label htmlFor="reg-team">Team / Player Name</label>
+                <label htmlFor="reg-team">{mode === 'solo' ? 'In-game Tag / Player ID' : 'Team Name'}</label>
                 <input
                   id="reg-team"
                   className="input"
-                  placeholder="e.g. DOrSU Stallions"
+                  placeholder={mode === 'solo' ? 'e.g. Killua.exe' : 'e.g. DOrSU Stallions'}
                   value={form.team_name}
                   onChange={set('team_name')}
                   required
                 />
               </div>
               <div className="field">
-                <label htmlFor="reg-captain">Captain / Contact Person</label>
+                <label htmlFor="reg-captain">{mode === 'solo' ? 'Player Name' : 'Captain / Contact Person'}</label>
                 <input
                   id="reg-captain"
                   className="input"
@@ -213,39 +259,50 @@ export default function Register() {
               </div>
             </div>
 
-            <div className="field">
-              <label>Roster {tournament && tournament.team_size > 1 ? `(up to ${Math.max(tournament.team_size * 2, tournament.team_size + 3)} players)` : '(player tag)'}</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {roster.map((row, i) => (
-                  <div key={i} className="form-grid-3">
-                    <input
-                      className="input"
-                      placeholder="Player name"
-                      value={row.name}
-                      onChange={setRosterRow(i, 'name')}
-                    />
-                    <input
-                      className="input"
-                      placeholder="In-game tag"
-                      value={row.tag}
-                      onChange={setRosterRow(i, 'tag')}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      style={{ paddingInline: 14 }}
-                      onClick={() => removeRow(i)}
-                      aria-label={`Remove player ${i + 1}`}
-                    >
-                      <Icon name="x" size={14} />
-                    </button>
-                  </div>
-                ))}
+            {mode === 'team' ? (
+              <div className="field">
+                <label>Roster {tournament && tournament.team_size > 1 ? `(up to ${Math.max(tournament.team_size * 2, tournament.team_size + 3)} players)` : '(player tag)'}</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {roster.map((row, i) => (
+                    <div key={i} className="form-grid-3">
+                      <input
+                        className="input"
+                        placeholder="Player name"
+                        value={row.name}
+                        onChange={setRosterRow(i, 'name')}
+                      />
+                      <input
+                        className="input"
+                        placeholder="In-game tag"
+                        value={row.tag}
+                        onChange={setRosterRow(i, 'tag')}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        style={{ paddingInline: 14 }}
+                        onClick={() => removeRow(i)}
+                        aria-label={`Remove player ${i + 1}`}
+                      >
+                        <Icon name="x" size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={addRow}>
+                  + Add player
+                </button>
               </div>
-              <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={addRow}>
-                + Add player
-              </button>
-            </div>
+            ) : (
+              <div className="form-success" style={{ fontSize: 13.5 }}>
+                <Icon name="bolt" size={14} /> You'll be matched as an individual entry — no roster needed.
+              </div>
+            )}
+            {soloOnly && (
+              <p style={{ color: 'var(--muted-2)', fontSize: 12.5, marginTop: 12 }}>
+                This tournament is 1v1 — individual entries only.
+              </p>
+            )}
 
             <button
               type="submit"
@@ -253,10 +310,11 @@ export default function Register() {
               style={{ width: '100%' }}
               disabled={busy || !selected}
             >
-              {busy ? <span className="spin" /> : <Icon name="bolt" size={15} />} Lock In Registration
+              {busy ? <span className="spin" /> : <Icon name="bolt" size={15} />}
+              {mode === 'solo' ? 'Lock In My Slot' : 'Lock In Registration'}
             </button>
             <p style={{ color: 'var(--muted-2)', fontSize: 12.5, textAlign: 'center', marginTop: 14 }}>
-              Slots are first-come, first-served. Duplicate team names are not allowed.
+              Slots are first-come, first-served. Duplicate names are not allowed.
             </p>
           </form>
           )}

@@ -860,7 +860,10 @@ function TournamentsPanel({ isAdmin }) {
                           }}
                         >
                           <div style={{ flex: 1, minWidth: 200 }}>
-                            <b style={{ fontSize: 14.5 }}>{r.team_name}</b>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <b style={{ fontSize: 14.5 }}>{r.team_name}</b>
+                              {r.entry_type === 'solo' && <span className="entry-solo">Solo</span>}
+                            </div>
                             <div style={{ fontSize: 12.5, color: 'var(--muted-2)' }}>
                               {r.captain_name} · {r.email} {r.roster?.length ? `· ${r.roster.length} player(s)` : ''}
                             </div>

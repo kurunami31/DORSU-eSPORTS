@@ -39,6 +39,8 @@ const SCHEMA = `
     contact TEXT NOT NULL DEFAULT '',
     roster TEXT NOT NULL DEFAULT '[]',
     status TEXT NOT NULL DEFAULT 'confirmed',
+    -- 'team' (multi-player) or 'solo' (individual entry)
+    entry_type TEXT NOT NULL DEFAULT 'team',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -65,7 +67,7 @@ const SCHEMA = `
     UNIQUE(tournament_id, round, position)
   );
 
-  -- Player accounts (login / signup). role: 'player' | 'admin' (super admin).
+  -- Player accounts (login / signup). role: 'player' | 'moderator' | 'admin' (super admin).
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -95,8 +97,15 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_name
-    ON registrations(tournament_id, LOWER(team_name));
+
+  -- Uniqueness is entry-type aware: teams dedupe by name; solo players dedupe
+  -- by email, because two different individuals may legitimately share a name.
+  -- (Drops the old unconditional name index so it can't block same-name solos.)
+  DROP INDEX IF EXISTS idx_reg_unique_name;
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_team_name
+    ON registrations(tournament_id, LOWER(team_name)) WHERE entry_type = 'team';
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_solo_email
+    ON registrations(tournament_id, LOWER(email)) WHERE entry_type = 'solo';
 `;
 
 // Idempotent migration for databases created before the role/username columns
@@ -115,12 +124,21 @@ function migrateUsers() {
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(LOWER(username))');
 }
 
+// Same pattern for databases created before solo registrations existed.
+function migrateRegistrations() {
+  const cols = db.prepare('PRAGMA table_info(registrations)').all().map((c) => c.name);
+  if (!cols.includes('entry_type')) {
+    db.exec("ALTER TABLE registrations ADD COLUMN entry_type TEXT NOT NULL DEFAULT 'team'");
+  }
+}
+
 export default {
   kind: 'sqlite',
 
   async init() {
     db.exec(SCHEMA);
     migrateUsers();
+    migrateRegistrations();
   },
 
   all(sql, params = []) {

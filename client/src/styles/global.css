@@ -313,6 +313,21 @@ button {
 .badge-active .dot { animation: pulse 1.4s ease infinite; }
 .badge-locked .dot { animation: pulse 1.4s ease infinite; }
 
+/* Solo-entry chip next to an entrant's name */
+.entry-solo {
+  flex-shrink: 0;
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #c4b5fd;
+  background: rgba(196, 181, 253, 0.1);
+  border: 1px solid rgba(196, 181, 253, 0.3);
+}
+
 /* ── Cards ──────────────────────────────────────────────── */
 .card {
   background: linear-gradient(180deg, var(--panel), var(--bg-2));
@@ -487,7 +502,11 @@ select.input option { background: var(--bg-2); }
   text-transform: uppercase;
   transition: all 0.18s ease;
 }
-.auth-tab:hover { color: var(--text); }
+.auth-tab:hover:not(:disabled) { color: var(--text); }
+.auth-tab:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
 .auth-tab.active {
   background: linear-gradient(135deg, var(--blue), var(--blue-bright));
   color: #fff;
