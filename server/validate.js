@@ -59,23 +59,23 @@ export function intRange(value, { name, min, max }) {
 }
 
 /**
- * Optional avatar: a `data:image/...;base64,...` URL (client resizes + encodes
- * to JPEG/PNG/WebP before upload). '' when absent. Rejects anything that is
- * not a whitelisted raster image and caps the payload so a 100kb body limit
- * can never be blown.
+ * Optional image upload: a `data:image/...;base64,...` URL (the client resizes
+ * and encodes to JPEG/PNG/WebP before upload). '' when absent. Rejects
+ * anything that is not a whitelisted raster image and caps the payload so the
+ * API's 100kb body limit can never be blown.
  */
-export function optionalAvatar(value, { maxBytes = 90_000 } = {}) {
+export function optionalImage(value, { name = 'Image', maxBytes = 90_000 } = {}) {
   if (value === undefined || value === null || value === '') return '';
   if (typeof value !== 'string') {
-    throw new ValidationError('Profile picture must be an image.');
+    throw new ValidationError(`${name} must be an image.`);
   }
   const s = value.trim();
   if (!s) return '';
   if (s.length > maxBytes) {
-    throw new ValidationError('Profile picture is too large — please use a smaller image.');
+    throw new ValidationError(`${name} is too large — please use a smaller image.`);
   }
   if (!/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s)) {
-    throw new ValidationError('Profile picture must be a valid image.');
+    throw new ValidationError(`${name} must be a valid image.`);
   }
   return s;
 }

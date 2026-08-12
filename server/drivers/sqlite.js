@@ -41,6 +41,8 @@ const SCHEMA = `
     status TEXT NOT NULL DEFAULT 'confirmed',
     -- 'team' (multi-player) or 'solo' (individual entry)
     entry_type TEXT NOT NULL DEFAULT 'team',
+    -- Group photo / team logo (data URL) uploaded at registration, for identification.
+    team_image TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -142,6 +144,9 @@ function migrateRegistrations() {
   const cols = db.prepare('PRAGMA table_info(registrations)').all().map((c) => c.name);
   if (!cols.includes('entry_type')) {
     db.exec("ALTER TABLE registrations ADD COLUMN entry_type TEXT NOT NULL DEFAULT 'team'");
+  }
+  if (!cols.includes('team_image')) {
+    db.exec("ALTER TABLE registrations ADD COLUMN team_image TEXT NOT NULL DEFAULT ''");
   }
 }
 

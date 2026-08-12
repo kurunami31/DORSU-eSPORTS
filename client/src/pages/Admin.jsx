@@ -859,6 +859,15 @@ function TournamentsPanel({ isAdmin }) {
                             padding: '10px 14px', background: 'var(--bg-1)', border: '1px solid var(--line)', borderRadius: 9,
                           }}
                         >
+                          {r.team_image && (
+                            <img
+                              src={r.team_image}
+                              alt=""
+                              className="entry-thumb"
+                              title={`${r.team_name} team photo / logo`}
+                              loading="lazy"
+                            />
+                          )}
                           <div style={{ flex: 1, minWidth: 200 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <b style={{ fontSize: 14.5 }}>{r.team_name}</b>

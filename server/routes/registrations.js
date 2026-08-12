@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireStaff, asyncHandler, isStaff } from '../middleware.js';
-import { ValidationError, requiredStr, validEmail, parseRoster } from '../validate.js';
+import { ValidationError, requiredStr, optionalImage, validEmail, parseRoster } from '../validate.js';
 
 const router = Router();
 
 // Fields shown to the public. Email/contact/roster are private — admin only.
-const PUBLIC_FIELDS = 'id, tournament_id, team_name, captain_name, entry_type, created_at';
+// team_image is the team's own uploaded logo/group photo (identification).
+const PUBLIC_FIELDS = 'id, tournament_id, team_name, captain_name, entry_type, team_image, created_at';
 
 // List registrations for a tournament
 router.get('/tournaments/:tournamentId/registrations', asyncHandler(async (req, res) => {
@@ -50,6 +51,9 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
   const contact = req.body.contact === undefined || req.body.contact === null
     ? ''
     : String(req.body.contact).trim().slice(0, 30).replace(/[^\d+\-\s]/g, '');
+  // Solo entries are individuals — a team logo is meaningless, so only teams
+  // may carry an image (validated as a raster data URL, capped payload).
+  const teamImage = entryType === 'solo' ? '' : optionalImage(req.body.team_image, { name: 'Team logo' });
 
   const maxRoster = tournament.team_size > 1
     ? Math.max(tournament.team_size * 2, tournament.team_size + 3)
@@ -76,8 +80,8 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
   try {
     saved = await db.withTransaction(async (tx) => {
       const result = await tx.run(
-        `INSERT INTO registrations (tournament_id, team_name, captain_name, email, contact, roster, status, entry_type)
-         SELECT ?, ?, ?, ?, ?, ?, 'confirmed', ?
+        `INSERT INTO registrations (tournament_id, team_name, captain_name, email, contact, roster, status, entry_type, team_image)
+         SELECT ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?
          WHERE (SELECT COUNT(*) FROM registrations WHERE tournament_id = ? AND status = 'confirmed')
                < (SELECT max_teams FROM tournaments WHERE id = ?)`,
         [
@@ -88,6 +92,7 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
           contact,
           JSON.stringify(roster),
           entryType,
+          teamImage,
           tournament.id,
           tournament.id,
         ]
@@ -116,7 +121,9 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
 
 // Remove a registration (staff — moderators police the team lists)
 router.delete('/registrations/:id', requireStaff, asyncHandler(async (req, res) => {
-  const result = await db.run('DELETE FROM registrations WHERE id = ?', [req.params.id]);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(404).json({ error: 'Registration not found' });
+  const result = await db.run('DELETE FROM registrations WHERE id = ?', [id]);
   if (result.changes === 0) return res.status(404).json({ error: 'Registration not found' });
   res.json({ ok: true });
 }));

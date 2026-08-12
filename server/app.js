@@ -76,7 +76,7 @@ const apiLimiter = rateLimit({
 // public GET list must never be throttled this tightly).
 const registerLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 30,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: json429,

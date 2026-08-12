@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getTournaments, getTournament, registerTeam } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import Icon from '../components/Icon.jsx';
-import { formatDate, teamSizeLabel } from '../utils.js';
+import { fileToImage, formatDate, teamSizeLabel } from '../utils.js';
 
 const EMPTY_ROSTER = () => [{ name: '', tag: '' }];
 
@@ -34,6 +34,9 @@ export default function Register() {
     }
   }, [user]);
   const [roster, setRoster] = useState(EMPTY_ROSTER);
+  const [teamImage, setTeamImage] = useState(''); // data URL ('' = none)
+  const [imgError, setImgError] = useState('');
+  const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
@@ -61,15 +64,6 @@ export default function Register() {
   // 1v1 tournaments accept individuals only — the toggle stays locked on solo.
   const soloOnly = tournament ? tournament.team_size === 1 : false;
 
-  // Switching to solo with a signed-in username? Offer their tag as the entry.
-  const switchMode = (next) => {
-    if (next === 'team' && soloOnly) return;
-    setMode(next);
-    if (next === 'solo' && !form.team_name.trim() && user?.username) {
-      setForm((f) => ({ ...f, team_name: user.username }));
-    }
-  };
-
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const setRosterRow = (i, key) => (e) =>
@@ -77,6 +71,30 @@ export default function Register() {
 
   const addRow = () => setRoster((rows) => [...rows, { name: '', tag: '' }]);
   const removeRow = (i) => setRoster((rows) => (rows.length > 1 ? rows.filter((_, idx) => idx !== i) : rows));
+
+  // Team logo / group picture — aspect preserved, longest edge ≤ 640.
+  const pickImage = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setImgError('');
+    try {
+      setTeamImage(await fileToImage(file, { maxDim: 640, square: false }));
+    } catch (err) {
+      setImgError(err.message);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  // Switching modes clears the image state so a solo entry never carries it.
+  const switchMode = (next) => {
+    if (next === 'team' && soloOnly) return;
+    setMode(next);
+    if (next === 'solo') setTeamImage('');
+    if (next === 'solo' && !form.team_name.trim() && user?.username) {
+      setForm((f) => ({ ...f, team_name: user.username }));
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -88,6 +106,7 @@ export default function Register() {
         ...form,
         entry_type: mode,
         roster: mode === 'solo' ? [] : cleanRoster,
+        team_image: mode === 'solo' ? '' : teamImage,
       });
       setDone(res);
     } catch (err) {
@@ -260,6 +279,7 @@ export default function Register() {
             </div>
 
             {mode === 'team' ? (
+              <>
               <div className="field">
                 <label>Roster {tournament && tournament.team_size > 1 ? `(up to ${Math.max(tournament.team_size * 2, tournament.team_size + 3)} players)` : '(player tag)'}</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -268,12 +288,14 @@ export default function Register() {
                       <input
                         className="input"
                         placeholder="Player name"
+                        aria-label={`Player ${i + 1} name`}
                         value={row.name}
                         onChange={setRosterRow(i, 'name')}
                       />
                       <input
                         className="input"
                         placeholder="In-game tag"
+                        aria-label={`Player ${i + 1} in-game tag`}
                         value={row.tag}
                         onChange={setRosterRow(i, 'tag')}
                       />
@@ -293,6 +315,46 @@ export default function Register() {
                   + Add player
                 </button>
               </div>
+
+              <div className="field" style={{ marginTop: 20 }}>
+                <label>Team Logo / Group Picture (optional)</label>
+                <div className="avatar-picker">
+                  <span className="avatar-picker-thumb avatar-picker-thumb-wide" aria-hidden="true">
+                    {teamImage ? (
+                      <img src={teamImage} alt="" />
+                    ) : (
+                      <Icon name="camera" size={26} />
+                    )}
+                  </span>
+                  <div className="avatar-picker-actions">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => fileRef.current && fileRef.current.click()}
+                    >
+                      <Icon name="camera" size={14} /> Choose Image
+                    </button>
+                    {teamImage && (
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => setTeamImage('')}>
+                        <Icon name="trash" size={14} /> Remove
+                      </button>
+                    )}
+                    <small className="avatar-hint">
+                      Your squad photo or logo, so the organizers can spot your team. Aspect ratio is kept.
+                    </small>
+                  </div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    aria-label="Upload team logo or group picture"
+                    onChange={pickImage}
+                  />
+                </div>
+                {imgError && <p className="form-error" style={{ marginTop: 10, marginBottom: 0 }}>{imgError}</p>}
+              </div>
+              </>
             ) : (
               <div className="form-success" style={{ fontSize: 13.5 }}>
                 <Icon name="bolt" size={14} /> You'll be matched as an individual entry — no roster needed.

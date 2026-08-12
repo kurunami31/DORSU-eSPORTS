@@ -3,47 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import Icon from '../components/Icon.jsx';
 import Reveal from '../components/Reveal.jsx';
-import { formatDate, FACEBOOK_URL } from '../utils.js';
-
-// Read a picked image file, square-crop to 256×256 on a canvas and return a
-// compact JPEG data URL (≈15–40 KB) — small enough for the API body limit.
-function fileToAvatar(file) {
-  return new Promise((resolve, reject) => {
-    if (!file || !file.type.startsWith('image/')) {
-      reject(new Error('Please choose an image file.'));
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      reject(new Error('Image is too large — please pick one under 8 MB.'));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read that image.'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('That file is not a readable image.'));
-      img.onload = () => {
-        const size = 256;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Your browser could not process the image.'));
-          return;
-        }
-        // Square center-crop, then scale down.
-        const side = Math.min(img.width, img.height);
-        const sx = (img.width - side) / 2;
-        const sy = (img.height - side) / 2;
-        ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+import { fileToImage, formatDate, FACEBOOK_URL } from '../utils.js';
 
 const PERKS = [
   { icon: 'bolt', title: 'One-tap registration', desc: 'Your captain details are prefilled when you sign your team up.' },
@@ -333,7 +293,7 @@ function ProfileCard({ onLogout }) {
     if (!file) return;
     setError('');
     try {
-      setAvatar(await fileToAvatar(file));
+      setAvatar(await fileToImage(file, { maxDim: 256, square: true }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -433,6 +393,7 @@ function ProfileCard({ onLogout }) {
                         type="file"
                         accept="image/*"
                         style={{ display: 'none' }}
+                        aria-label="Upload profile picture"
                         onChange={pickAvatar}
                       />
                     </div>

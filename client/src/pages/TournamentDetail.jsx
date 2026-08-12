@@ -195,6 +195,15 @@ export default function TournamentDetail() {
                       >
                         {i + 1}
                       </span>
+                      {r.team_image && (
+                        <img
+                          src={r.team_image}
+                          alt=""
+                          className="entry-thumb"
+                          title={`${r.team_name} team photo / logo`}
+                          loading="lazy"
+                        />
+                      )}
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.team_name}</span>

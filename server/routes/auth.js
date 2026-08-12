@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { asyncHandler } from '../middleware.js';
-import { ValidationError, requiredStr, optionalStr, optionalAvatar, validEmail } from '../validate.js';
+import { ValidationError, requiredStr, optionalStr, optionalImage, validEmail } from '../validate.js';
 import {
   hashPassword,
   verifyPassword,
@@ -128,7 +128,7 @@ router.patch('/profile', requireAuth, asyncHandler(async (req, res) => {
   const name = requiredStr(req.body.name, { name: 'Name', min: 2, max: 60 });
   const bio = optionalStr(req.body.bio, { name: 'Bio', max: 300 });
   const contact = optionalStr(req.body.contact, { name: 'Contact', max: 30 }).replace(/[^\d+\-\s]/g, '');
-  const avatar = optionalAvatar(req.body.avatar);
+  const avatar = optionalImage(req.body.avatar, { name: 'Profile picture' });
 
   await db.run('UPDATE users SET name = ?, bio = ?, contact = ?, avatar = ? WHERE id = ?', [
     name,

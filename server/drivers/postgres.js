@@ -46,6 +46,8 @@ const SCHEMA = `
     status TEXT NOT NULL DEFAULT 'confirmed',
     -- 'team' (multi-player) or 'solo' (individual entry)
     entry_type TEXT NOT NULL DEFAULT 'team',
+    -- Group photo / team logo (data URL) uploaded at registration, for identification.
+    team_image TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 
@@ -123,6 +125,7 @@ const SCHEMA = `
   ALTER TABLE users ADD COLUMN IF NOT EXISTS contact TEXT NOT NULL DEFAULT '';
   ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT '';
   ALTER TABLE registrations ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'team';
+  ALTER TABLE registrations ADD COLUMN IF NOT EXISTS team_image TEXT NOT NULL DEFAULT '';
 
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (LOWER(username));
 

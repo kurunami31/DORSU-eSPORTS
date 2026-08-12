@@ -227,6 +227,57 @@ async function req(path, opts = {}) {
     method: 'DELETE', headers: adminHeaders,
   })).status === 200);
 
+  console.log('1g. Team logo / group photo on registrations');
+  const tinyPng2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const imgTag = `Logo Team ${Date.now()}`;
+  const withLogo = await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({
+      team_name: imgTag,
+      captain_name: 'Logo Cap',
+      email: `logo${Date.now()}@dorsu.edu.ph`,
+      team_image: tinyPng2,
+    }),
+  });
+  check('team registration with logo 201', withLogo.status === 201);
+  check('logo persisted on registration', withLogo.body && withLogo.body.team_image === tinyPng2);
+  const pubImg = await req('/api/tournaments/2/registrations');
+  const pubRow = (pubImg.body || []).find((r) => r.team_name === imgTag);
+  check('logo visible in public list (identification)', pubRow && pubRow.team_image === tinyPng2);
+  check('non-image team logo rejected 400', (await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({
+      team_name: `BadLogo ${Date.now()}`, captain_name: 'X', email: `badlogo${Date.now()}@dorsu.edu.ph`,
+      team_image: 'data:text/html;base64,PGh0bWw+',
+    }),
+  })).status === 400);
+  check('oversized team logo rejected 400', (await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({
+      team_name: `HugeLogo ${Date.now()}`, captain_name: 'X', email: `hugelogo${Date.now()}@dorsu.edu.ph`,
+      team_image: 'data:image/png;base64,' + 'A'.repeat(100_000),
+    }),
+  })).status === 400);
+  // Solo entries never carry a team image (server force-clears it).
+  const soloImg = await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({
+      entry_type: 'solo',
+      team_name: `SoloImgTag${Date.now()}`,
+      captain_name: 'Solo Img',
+      email: `soloimg${Date.now()}@dorsu.edu.ph`,
+      team_image: tinyPng2,
+    }),
+  });
+  check('solo registration with team_image accepted 201', soloImg.status === 201);
+  check('solo entry stores no team_image', soloImg.body && soloImg.body.team_image === '');
+  check('logo registration removed (admin)', (await req(`/api/registrations/${withLogo.body ? withLogo.body.id : 0}`, {
+    method: 'DELETE', headers: adminHeaders,
+  })).status === 200);
+  check('solo-image registration removed (admin)', (await req(`/api/registrations/${soloImg.body ? soloImg.body.id : 0}`, {
+    method: 'DELETE', headers: adminHeaders,
+  })).status === 200);
+
   console.log('2. Input validation — 400s');
   const longTeam = 'T'.repeat(60);
   check(
