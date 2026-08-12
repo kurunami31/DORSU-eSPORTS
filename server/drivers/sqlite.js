@@ -68,6 +68,7 @@ const SCHEMA = `
   );
 
   -- Player accounts (login / signup). role: 'player' | 'moderator' | 'admin' (super admin).
+  -- bio/contact/avatar are editable from the player profile page.
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -75,6 +76,9 @@ const SCHEMA = `
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'player',
+    bio TEXT NOT NULL DEFAULT '',
+    contact TEXT NOT NULL DEFAULT '',
+    avatar TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -120,6 +124,15 @@ function migrateUsers() {
   }
   if (!cols.includes('username')) {
     db.exec('ALTER TABLE users ADD COLUMN username TEXT');
+  }
+  if (!cols.includes('bio')) {
+    db.exec("ALTER TABLE users ADD COLUMN bio TEXT NOT NULL DEFAULT ''");
+  }
+  if (!cols.includes('contact')) {
+    db.exec("ALTER TABLE users ADD COLUMN contact TEXT NOT NULL DEFAULT ''");
+  }
+  if (!cols.includes('avatar')) {
+    db.exec("ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''");
   }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(LOWER(username))');
 }

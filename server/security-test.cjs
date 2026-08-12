@@ -167,6 +167,66 @@ async function req(path, opts = {}) {
     method: 'DELETE', headers: adminHeaders,
   })).status === 200);
 
+  console.log('1f. Profile editing — own account only');
+  const pfx = `prof${Date.now()}`;
+  const profUser = await req('/api/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'Profile Tester', email: `${pfx}@dorsu.edu.ph`, password: 'proftest99' }),
+  });
+  check('profile test signup 201', profUser.status === 201);
+  const profHeaders = { Authorization: `Bearer ${profUser.body ? profUser.body.token : ''}` };
+  check('profile update without token 401', (await req('/api/auth/profile', {
+    method: 'PATCH', body: JSON.stringify({ name: 'Nope' }),
+  })).status === 401);
+  // The endpoint is scoped to the caller's own row — a body-supplied user id
+  // is ignored, and one account's token can never edit another account.
+  const scoped = await req('/api/auth/profile', {
+    method: 'PATCH', headers: profHeaders,
+    body: JSON.stringify({ name: 'Scoped Check', id: 1 }),
+  });
+  check('profile edits only the caller\'s own row', scoped.status === 200 &&
+    scoped.body.user.name === 'Scoped Check' &&
+    scoped.body.user.id === (profUser.body ? profUser.body.user.id : null));
+  const upd = await req('/api/auth/profile', {
+    method: 'PATCH', headers: profHeaders,
+    body: JSON.stringify({ name: 'Profile Renamed', bio: 'Gold laner, MLBB & CODM.', contact: '0917 555 12ab!' }),
+  });
+  check('profile update 200', upd.status === 200 && upd.body && upd.body.user);
+  check('name persisted', upd.body && upd.body.user.name === 'Profile Renamed');
+  check('bio persisted', upd.body && upd.body.user.bio === 'Gold laner, MLBB & CODM.');
+  check('contact sanitized (letters/symbols stripped)', upd.body && upd.body.user.contact === '0917 555 12');
+  // Tiny valid 1×1 PNG data URL.
+  const tinyPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const withAvatar = await req('/api/auth/profile', {
+    method: 'PATCH', headers: profHeaders,
+    body: JSON.stringify({ name: 'Profile Renamed', bio: 'Gold laner.', avatar: tinyPng }),
+  });
+  check('avatar saved 200', withAvatar.status === 200 && withAvatar.body && withAvatar.body.user.avatar === tinyPng);
+  check('avatar shows on /me', (await req('/api/auth/me', { headers: profHeaders })).body.user.avatar === tinyPng);
+  check('non-image avatar rejected 400', (await req('/api/auth/profile', {
+    method: 'PATCH', headers: profHeaders,
+    body: JSON.stringify({ name: 'Profile Renamed', bio: 'Gold laner.', avatar: 'data:text/html;base64,PGh0bWw+' }),
+  })).status === 400);
+  check('oversized avatar rejected 400', (await req('/api/auth/profile', {
+    method: 'PATCH', headers: profHeaders,
+    body: JSON.stringify({ name: 'Profile Renamed', bio: 'Gold laner.', avatar: 'data:image/png;base64,' + 'A'.repeat(100_000) }),
+  })).status === 400);
+  check('bio over 300 chars rejected 400', (await req('/api/auth/profile', {
+    method: 'PATCH', headers: profHeaders,
+    body: JSON.stringify({ name: 'Profile Renamed', bio: 'x'.repeat(301) }),
+  })).status === 400);
+  check('short name rejected 400', (await req('/api/auth/profile', {
+    method: 'PATCH', headers: profHeaders,
+    body: JSON.stringify({ name: 'A' }),
+  })).status === 400);
+  check('email immutable via profile', (await req('/api/auth/profile', {
+    method: 'PATCH', headers: profHeaders,
+    body: JSON.stringify({ name: 'Profile Renamed', email: 'evil@dorsu.edu.ph' }),
+  })).body.user.email === `${pfx}@dorsu.edu.ph`);
+  check('profile test account deleted (admin)', (await req(`/api/admin/users/${profUser.body ? profUser.body.user.id : 0}`, {
+    method: 'DELETE', headers: adminHeaders,
+  })).status === 200);
+
   console.log('2. Input validation — 400s');
   const longTeam = 'T'.repeat(60);
   check(

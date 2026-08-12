@@ -60,9 +60,13 @@ export default function Navbar() {
         <div className="nav-cta">
           {user ? (
             <Link to="/login" className="nav-user" title="My account">
-              <span className="nav-user-avatar" aria-hidden="true">
-                {(user.name || '?').trim().charAt(0).toUpperCase()}
-              </span>
+              {user.avatar ? (
+                <img src={user.avatar} alt="" className="nav-user-avatar nav-user-avatar-img" aria-hidden="true" />
+              ) : (
+                <span className="nav-user-avatar" aria-hidden="true">
+                  {(user.name || '?').trim().charAt(0).toUpperCase()}
+                </span>
+              )}
               <span className="nav-user-name">{user.name.split(' ')[0]}</span>
             </Link>
           ) : ready ? (

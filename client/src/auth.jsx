@@ -65,8 +65,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Update the signed-in player's own profile (name/bio/contact/avatar).
+  const updateProfile = useCallback(async (data) => {
+    const res = await api('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) });
+    setUser(res.user);
+    return res.user;
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, ready, signup, login, loginAdmin, logout, refresh }}>
+    <AuthContext.Provider value={{ user, ready, signup, login, loginAdmin, logout, refresh, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

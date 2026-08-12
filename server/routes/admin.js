@@ -83,7 +83,7 @@ router.get('/users', asyncHandler(async (req, res) => {
   const like = `%${q}%`;
 
   const base = `
-    SELECT u.id, u.name, u.username, u.email, u.role, u.created_at,
+    SELECT u.id, u.name, u.username, u.email, u.role, u.bio, u.contact, u.avatar, u.created_at,
       (SELECT COUNT(*) FROM registrations r
         WHERE r.email = u.email AND r.status = 'confirmed') AS registrations
     FROM users u
@@ -142,7 +142,7 @@ router.patch('/users/:id/role', asyncHandler(async (req, res) => {
   await db.run('UPDATE users SET role = ?, username = ? WHERE id = ?', [role, username, id]);
 
   const user = await db.get(
-    'SELECT id, name, username, email, role, created_at FROM users WHERE id = ?',
+    'SELECT id, name, username, email, role, bio, contact, avatar, created_at FROM users WHERE id = ?',
     [id]
   );
   res.json(user);

@@ -73,6 +73,7 @@ const SCHEMA = `
   );
 
   -- Player accounts (login / signup). role: 'player' | 'moderator' | 'admin' (super admin).
+  -- bio/contact/avatar are editable from the player profile page.
   CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -80,6 +81,9 @@ const SCHEMA = `
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'player',
+    bio TEXT NOT NULL DEFAULT '',
+    contact TEXT NOT NULL DEFAULT '',
+    avatar TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 
@@ -115,6 +119,9 @@ const SCHEMA = `
   -- Migrations for databases created before these columns existed.
   ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
   ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'player';
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS contact TEXT NOT NULL DEFAULT '';
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT '';
   ALTER TABLE registrations ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'team';
 
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (LOWER(username));

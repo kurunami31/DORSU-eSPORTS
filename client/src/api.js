@@ -43,6 +43,9 @@ export const getAnnouncements = (limit) => api(`/announcements${limit ? `?limit=
 export const sendChat = (messages) =>
   api('/chat', { method: 'POST', body: JSON.stringify({ messages }) });
 
+export const updateProfile = (data) =>
+  api('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) });
+
 export const createTournament = (data) =>
   api('/tournaments', { method: 'POST', body: JSON.stringify(data) });
 export const updateTournament = (id, data) =>

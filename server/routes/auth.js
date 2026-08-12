@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { asyncHandler } from '../middleware.js';
-import { ValidationError, requiredStr, validEmail } from '../validate.js';
+import { ValidationError, requiredStr, optionalStr, optionalAvatar, validEmail } from '../validate.js';
 import {
   hashPassword,
   verifyPassword,
@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-const USER_FIELDS = 'id, name, username, email, role, created_at';
+const USER_FIELDS = 'id, name, username, email, role, bio, contact, avatar, created_at';
 
 // Fixed scrypt output used to equalize login timing for unknown emails.
 const DUMMY_HASH = hashPassword('dummy-constant-password');
@@ -28,7 +28,19 @@ function checkPassword(value) {
 }
 
 const toPublicUser = (u) =>
-  u ? { id: u.id, name: u.name, username: u.username, email: u.email, role: u.role, created_at: u.created_at } : null;
+  u
+    ? {
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        bio: u.bio ?? '',
+        contact: u.contact ?? '',
+        avatar: u.avatar ?? '',
+        created_at: u.created_at,
+      }
+    : null;
 
 // Sign up — creates the account and returns a session token.
 router.post('/signup', asyncHandler(async (req, res) => {
@@ -108,5 +120,25 @@ router.post('/logout', asyncHandler(async (req, res) => {
 router.get('/me', requireAuth, (req, res) => {
   res.json({ user: toPublicUser(req.user) });
 });
+
+// Update the signed-in player's own profile (name, bio, contact, avatar).
+// Email and username are identity/security fields — they stay immutable here
+// (email is the login handle; username is managed by staff for staff roles).
+router.patch('/profile', requireAuth, asyncHandler(async (req, res) => {
+  const name = requiredStr(req.body.name, { name: 'Name', min: 2, max: 60 });
+  const bio = optionalStr(req.body.bio, { name: 'Bio', max: 300 });
+  const contact = optionalStr(req.body.contact, { name: 'Contact', max: 30 }).replace(/[^\d+\-\s]/g, '');
+  const avatar = optionalAvatar(req.body.avatar);
+
+  await db.run('UPDATE users SET name = ?, bio = ?, contact = ?, avatar = ? WHERE id = ?', [
+    name,
+    bio,
+    contact,
+    avatar,
+    req.user.id,
+  ]);
+  const user = await db.get(`SELECT ${USER_FIELDS} FROM users WHERE id = ?`, [req.user.id]);
+  res.json({ user: toPublicUser(user) });
+}));
 
 export default router;
