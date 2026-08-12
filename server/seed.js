@@ -106,6 +106,20 @@ export async function runSeed() {
     registration_deadline: dateOffset(4),
   });
 
+  const mlbbOpen = await insertTournament({
+    name: 'MLBB Open Qualifiers',
+    game: 'Mobile Legends: Bang Bang',
+    description:
+      'The open qualifier for the next MLBB season. Solo and duo entries welcome — we match you into a full squad for the bracket. 5v5 single elimination, top teams advance to the main event with a ₱1,500 prize pool on the line.',
+    format: 'single-elimination',
+    team_size: 5,
+    max_teams: 16,
+    prize: '₱1,500 prize pool + main-event slots',
+    status: 'open',
+    start_date: dateOffset(12),
+    registration_deadline: dateOffset(4),
+  });
+
   const mlbbFinished = await insertTournament({
     name: 'Intramurals Showdown 2025',
     game: 'Mobile Legends: Bang Bang',
@@ -146,6 +160,20 @@ export async function runSeed() {
   ]) {
     await insertRegistration(valorantOpen, name, captain, email, [
       { name: captain, tag: 'cap_' + name.toLowerCase().replace(/[^a-z0-9]/g, '') },
+    ]);
+  }
+
+  for (const [name, captain, email] of [
+    ['DOrSU Stallions', 'Marco Reyes', 'marco.reyes@dorsu.edu.ph'],
+    ['Team Izure', 'Jasmine Dela Cruz', 'jasmine.dc@dorsu.edu.ph'],
+    ['Night Owls', 'Kyle Bautista', 'kyle.b@dorsu.edu.ph'],
+    ['Red Dragons', 'Andrea Lim', 'andrea.lim@dorsu.edu.ph'],
+    ['Phantom Five', 'Miguel Torres', 'miguel.t@dorsu.edu.ph'],
+    ['Storm Breakers', 'Nica Ramos', 'nica.ramos@dorsu.edu.ph'],
+  ]) {
+    await insertRegistration(mlbbOpen, name, captain, email, [
+      { name: captain, tag: name.toLowerCase().replace(/[^a-z0-9]/g, '') },
+      { name: 'Squad fill', tag: 'fill_' + name.toLowerCase().replace(/[^a-z0-9]/g, '') },
     ]);
   }
 
