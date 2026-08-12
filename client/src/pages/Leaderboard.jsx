@@ -10,8 +10,16 @@ function EntryBadge({ type }) {
   return <span className={`entry-badge ${type}`}>{type === 'solo' ? 'Solo' : 'Team'}</span>;
 }
 
+function GameMark({ game, className = '' }) {
+  const glyph = gameGlyph(game);
+  return glyph.image ? (
+    <img className={className} src={glyph.image} alt="" title={game} />
+  ) : (
+    <Icon className={className} name={glyph.icon} size={14} />
+  );
+}
+
 function TeamCell({ row }) {
-  const glyph = gameGlyph(row.game);
   return (
     <div className="lb-team">
       {row.team_image ? (
@@ -22,7 +30,9 @@ function TeamCell({ row }) {
       <div className="lb-team-meta">
         <b>{row.team_name}</b>
         <span className="lb-team-sub">
-          <EntryBadge type={row.entry_type} /> {row.game}
+          <EntryBadge type={row.entry_type} />
+          <GameMark game={row.game} className="lb-game-img" />
+          {row.game}
         </span>
       </div>
     </div>
@@ -102,6 +112,7 @@ export default function Leaderboard() {
                   className={`filter-tab ${game === g.game ? 'active' : ''}`}
                   onClick={() => setGame(g.game)}
                 >
+                  <GameMark game={g.game} className="filter-tab-glyph" />
                   {g.game}
                 </button>
               ))}
@@ -139,7 +150,10 @@ export default function Leaderboard() {
                           </span>
                         )}
                         <b className="podium-name">{row.team_name}</b>
-                        <span className="podium-game">{row.game}</span>
+                        <span className="podium-game">
+                          <GameMark game={row.game} className="podium-game-img" />
+                          {row.game}
+                        </span>
                         <div className="podium-stats">
                           <span title="Championship titles">
                             <Icon name="crown" size={13} /> {row.titles}

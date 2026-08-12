@@ -1594,7 +1594,19 @@ select.input option { background: var(--bg-2); }
   letter-spacing: 0.06em;
   text-transform: uppercase;
   transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+/* Game logo/icon inside leaderboard filter chips */
+.filter-tab-glyph {
+  height: 16px;
+  width: auto;
+  border-radius: 3px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.filter-tab-glyph.icon { color: var(--muted); }
 .filter-tab:hover { color: var(--text); border-color: var(--blue-bright); }
 .filter-tab.active {
   background: linear-gradient(135deg, var(--blue), var(--blue-bright));
@@ -2806,7 +2818,20 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.podium-game { color: var(--muted-2); font-size: 12.5px; }
+.podium-game {
+  color: var(--muted-2);
+  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.podium-game-img {
+  height: 16px;
+  width: auto;
+  border-radius: 3px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
 .podium-stats {
   display: flex;
   gap: 14px;
@@ -2872,6 +2897,13 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .lb-team-meta { min-width: 0; }
 .lb-team-meta b { display: block; color: var(--text); font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-team-sub { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-2); }
+.lb-game-img {
+  height: 15px;
+  width: auto;
+  border-radius: 3px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
 .entry-badge {
   font-family: var(--font-head);
   font-size: 10px;
