@@ -712,6 +712,10 @@ select.input option { background: var(--bg-2); }
   align-items: center;
   gap: 12px;
   color: #fff;
+  /* Signed-in navbar gets crowded (Panel + account chip) and squeezes the
+     logo; allow shrinking so text truncates instead of wrapping into lines
+     that spill past the top/bottom of the bar. */
+  min-width: 0;
 }
 .logo-tile {
   width: 40px;
@@ -735,13 +739,20 @@ select.input option { background: var(--bg-2); }
   height: 38px;
   filter: drop-shadow(0 0 10px rgba(91, 150, 255, 0.5));
 }
-.logo-text { line-height: 1.1; }
+.logo-text {
+  line-height: 1.1;
+  min-width: 0;
+}
 .logo-text strong {
   font-family: var(--font-display);
   font-size: 16px;
   letter-spacing: 0.07em;
   display: block;
   font-weight: 800;
+  /* Never wrap: truncate with an ellipsis when the navbar is tight. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .logo-text small {
   font-family: var(--font-head);
@@ -750,6 +761,9 @@ select.input option { background: var(--bg-2); }
   color: var(--muted);
   text-transform: uppercase;
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-links {
@@ -2967,10 +2981,12 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .lb-table th:last-child, .lb-table td:last-child { padding-right: 14px; }
 }
 
-/* Keep the six-item nav comfortable on narrow laptops */
-@media (max-width: 1180px) and (min-width: 901px) {
-  .nav-links a { font-size: 13px; padding: 8px 7px; }
+/* Keep the crowded signed-in nav (7 links + account chip) comfortable on
+   laptops, so the logo wordmark never has to truncate. */
+@media (max-width: 1400px) and (min-width: 901px) {
+  .nav-links a { font-size: 13px; padding: 8px 9px; }
   .nav-links { gap: 2px; }
   .nav-user-name { display: none; }
   .nav-cta { gap: 8px; }
+  .nav-cta .btn-sm { padding-inline: 13px; }
 }
