@@ -116,7 +116,7 @@ vercel --prod              # production
 - Visit **/admin** on the deployed site (there is no public link to it; signed-in staff also see a **Panel** link in the navbar)
 - Sign in with a **staff account**: username + password (super admins and moderators both use this form)
 - **Super admin** (seed): username `esportadmin` · password `dorsuesports2026`
-- **Moderators** are promoted by the super admin from existing player accounts — **Players tab → Role** dropdown (you can also set their sign-in username there). Their access:
+- **Moderators** are promoted by the super admin from existing player accounts — **Players tab → Role** dropdown offers only **Player / Moderator** (you can also set their sign-in username there). The **Super Admin role is reserved for the built-in `esportadmin` account** and can never be granted to another account — not from the panel and not via the API. Their access:
   - ✅ Site overview stats, publish/edit/delete announcements, review team lists + remove rule-breaking registrations, full team-list detail view
   - ❌ No tournament create/edit/delete, no bracket generation, no account management, no role changes, no maintenance toggle
 - The super admin account is created by the seed script (`server/seed.js` — see `SUPER_ADMIN`) with the password stored as a scrypt hash. To change it, update `SUPER_ADMIN` in `seed.js` and re-run `npm run seed`
@@ -147,7 +147,7 @@ vercel --prod              # production
 | GET | `/api/health` | Liveness probe (+ current `maintenance` flag) |
 | GET | `/api/admin/stats` | Rich dashboard stats (game/status breakdowns, recent sign-ups, deadlines) *(staff)* |
 | GET | `/api/admin/users` | List player accounts (+ `?q=` search) *(admin)* |
-| PATCH | `/api/admin/users/:id/role` | Set a role: `player` / `moderator` / `admin` (+ optional `username` for staff) *(admin)* |
+| PATCH | `/api/admin/users/:id/role` | Set a role: `player` / `moderator` (+ optional `username` for moderators). The `admin` role is reserved for the super admin account *(admin)* |
 | DELETE | `/api/admin/users/:id` | Delete a player account (staff accounts protected) *(admin)* |
 | PUT | `/api/admin/maintenance` | Toggle maintenance mode + set message live from the panel *(admin)* |
 

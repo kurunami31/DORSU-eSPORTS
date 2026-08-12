@@ -419,10 +419,11 @@ function MaintenanceControl() {
   );
 }
 
+// The admin role is reserved for the built-in super admin account and can
+// never be granted from the panel — the dropdown manages players/moderators.
 const ROLE_OPTIONS = [
   { value: 'player', label: 'Player' },
   { value: 'moderator', label: 'Moderator' },
-  { value: 'admin', label: 'Super Admin' },
 ];
 
 /* ── Inline role editor (super admin only) ──────────────── */
@@ -432,6 +433,16 @@ function RoleEditor({ account, me, onChanged }) {
   const [username, setUsername] = useState(account.username || '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+
+  // Existing super admin accounts are fixed — no dropdown, no accidental demotion.
+  if (account.role === 'admin') {
+    return (
+      <div className="role-editor">
+        <span className="role-chip admin">Super Admin</span>
+        {isMe && <span className="u-email">You</span>}
+      </div>
+    );
+  }
 
   const save = async (nextRole) => {
     setRole(nextRole);

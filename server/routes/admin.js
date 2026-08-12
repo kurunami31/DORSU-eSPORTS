@@ -5,7 +5,9 @@ import { ValidationError, optionalStr } from '../validate.js';
 
 const router = Router();
 
-const ROLES = ['player', 'moderator', 'admin'];
+// The admin role belongs to the built-in super admin account only — it can
+// never be granted to another account through this endpoint.
+const ROLES = ['player', 'moderator'];
 
 // ── Rich statistics (staff: super admin + moderator) ───────
 router.get('/stats', requireStaff, asyncHandler(async (req, res) => {
@@ -115,7 +117,7 @@ router.patch('/users/:id/role', asyncHandler(async (req, res) => {
 
   const role = String(req.body.role || '').trim().toLowerCase();
   if (!ROLES.includes(role)) {
-    throw new ValidationError('Role must be player, moderator, or admin.');
+    throw new ValidationError('Role must be player or moderator. The admin role is reserved for the super admin account.');
   }
 
   const target = await db.get('SELECT * FROM users WHERE id = ?', [id]);
