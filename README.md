@@ -34,6 +34,14 @@ npm run dev
 
 Open **http://localhost:5173** — with no `DATABASE_URL` set, the app uses a local SQLite file (`server/data/dorsu.db`) and auto-seeds demo data on first boot.
 
+To run locally against Supabase instead, create a **`.env`** file in the repo root (it's gitignored) with your pooler URI:
+
+```bash
+DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true"
+```
+
+The server auto-loads the root `.env` (via `dotenv`) on every entrypoint (`npm run dev`, `npm run seed`, and the Vercel function).
+
 ## 🗄 Database: Supabase (production)
 
 The app picks its database automatically from the environment:
@@ -52,11 +60,13 @@ Both paths share one async driver interface and produce identical API responses.
 
 ### 2. Create the schema + seed data (once)
 
-Run the seed with the **direct connection** string (port `5432`, e.g. `postgresql://postgres.<ref>:<password>@db.<ref>.supabase.co:5432/postgres`) — DDL is more reliable on the direct connection than through the transaction pooler:
+The schema auto-migrates on boot (`CREATE TABLE IF NOT EXISTS`), so seeding is the only manual step. The seed works fine through the **transaction pooler** URI:
 
 ```bash
-DATABASE_URL="postgresql://postgres.<ref>:<password>@db.<ref>.supabase.co:5432/postgres" npm run seed
+DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true" npm run seed
 ```
+
+This drops and recreates all tables, then loads 5 tournaments, 38 teams, live brackets, and 5 announcements. Re-run it anytime to reset to pristine demo data.
 
 ## ▲ Vercel Deployment
 

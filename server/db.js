@@ -5,6 +5,16 @@
 // Both drivers expose the same async interface: all/get/run/exec/withTransaction,
 // and produce identical JSON payloads.
 
+// Load the repo-root .env (local dev). No-op when DATABASE_URL comes from the
+// environment (Vercel) or when the file doesn't exist.
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+dotenv.config({
+  path: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env'),
+  quiet: true,
+});
+
 const usePostgres = Boolean(process.env.DATABASE_URL);
 
 export const db = usePostgres
