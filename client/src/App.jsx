@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
@@ -11,6 +11,50 @@ import About from './pages/About.jsx';
 import Admin from './pages/Admin.jsx';
 import Auth from './pages/Auth.jsx';
 import NotFound from './pages/NotFound.jsx';
+import Maintenance from './pages/Maintenance.jsx';
+import { getMaintenance } from './api.js';
+import { useAuth } from './auth.jsx';
+
+// While maintenance mode is on, visitors see the "Under Maintenance" page.
+// The super admin (role: admin) is allowed through so the site can be
+// managed — e.g. to flip maintenance off again.
+function MaintenanceGate({ maintenance, children }) {
+  const { user, ready } = useAuth();
+  const { pathname } = useLocation();
+  const isAdmin = ready && user?.role === 'admin';
+
+  if (maintenance === null) {
+    // First check still in flight — hold the splash so the site never flashes.
+    return (
+      <div className="maintenance-loading" aria-hidden="true">
+        <span className="logo-tile">
+          <img src="/logos/dorsu-logo.jpg" alt="" />
+        </span>
+      </div>
+    );
+  }
+
+  if (maintenance.maintenance) {
+    // Wait for auth before hiding the site, so an admin who is already
+    // signed in is never flashed the maintenance page.
+    if (!ready) {
+      return (
+        <div className="maintenance-loading" aria-hidden="true">
+          <span className="logo-tile">
+            <img src="/logos/dorsu-logo.jpg" alt="" />
+          </span>
+        </div>
+      );
+    }
+    // The super admin always gets in (to manage + turn maintenance off),
+    // and /admin stays reachable so a lost admin session can be recovered.
+    if (!isAdmin && pathname !== '/admin') {
+      return <Maintenance message={maintenance.message} />;
+    }
+  }
+
+  return children;
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -21,8 +65,34 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  const [maintenance, setMaintenance] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      try {
+        const res = await getMaintenance();
+        if (active) setMaintenance(res);
+      } catch {
+        // API unreachable — never false-positive into maintenance mode.
+        if (active) setMaintenance({ maintenance: false, message: null });
+      }
+    };
+    check();
+    // Re-check every minute + on tab focus so the site comes back
+    // automatically the moment maintenance is switched off.
+    const id = setInterval(check, 60_000);
+    const onFocus = () => check();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      active = false;
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
   return (
-    <>
+    <MaintenanceGate maintenance={maintenance}>
       <ScrollToTop />
       <Navbar />
       <main>
@@ -41,6 +111,6 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
-    </>
+    </MaintenanceGate>
   );
 }

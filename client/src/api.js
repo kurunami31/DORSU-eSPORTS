@@ -33,6 +33,7 @@ export async function api(path, options = {}) {
 }
 
 export const getStats = () => api('/stats');
+export const getMaintenance = () => api('/maintenance');
 export const getTournaments = (status) => api(`/tournaments${status ? `?status=${status}` : ''}`);
 export const getTournament = (id) => api(`/tournaments/${id}`);
 export const getBracket = (id) => api(`/tournaments/${id}/bracket`);

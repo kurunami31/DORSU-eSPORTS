@@ -136,8 +136,19 @@ vercel --prod              # production
 | GET | `/api/announcements` | Announcements feed |
 | POST / PATCH / DELETE | `/api/announcements[/:id]` | Manage announcements *(admin)* |
 | GET | `/api/stats` | Site-wide stats |
+| GET | `/api/maintenance` | Maintenance flag + message (`MAINTENANCE_MODE` env var) |
+| GET | `/api/health` | Liveness probe (+ current `maintenance` flag) |
 
 Admin routes require `Authorization: Bearer <admin-session-token>` (obtained via `POST /api/auth/admin-login`).
+
+## 🚧 Maintenance mode
+
+Flip the site to a full-screen **"Under Maintenance"** page while you roll out updates:
+
+1. Set `MAINTENANCE_MODE=1` in the environment (Vercel project settings, or your local `.env`) — `MAINTENANCE_MESSAGE` optionally customizes the copy shown
+2. Redeploy / restart the API
+3. Visitors see the branded maintenance page; the page **auto-recovers** (polls every 60s and on tab focus) the moment `MAINTENANCE_MODE` is removed
+4. The super admin (`esportadmin`) can still access the site so the panel stays usable to turn maintenance off
 
 ## 🗂 Project Structure
 
@@ -163,5 +174,7 @@ Admin routes require `Authorization: Bearer <admin-session-token>` (obtained via
 | --- | --- |
 | `DATABASE_URL` | Supabase Postgres connection string (transaction pooler). Omit for local SQLite |
 | `PORT` | API port for local dev (default `5000`) |
+| `MAINTENANCE_MODE` | Set to `1`/`true`/`on` to show the "Under Maintenance" page site-wide (default off) |
+| `MAINTENANCE_MESSAGE` | Optional custom message shown on the maintenance page |
 
 > **Super admin credentials** are constants in `server/seed.js` (`SUPER_ADMIN.username` / `SUPER_ADMIN.password`) — they are *not* environment variables. Change them there and re-run `npm run seed`.

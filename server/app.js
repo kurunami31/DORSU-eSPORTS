@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { requireAdmin, errorHandler, notFound } from './middleware.js';
+import { requireAdmin, isAdmin, errorHandler, notFound } from './middleware.js';
 import tournamentsRouter from './routes/tournaments.js';
 import registrationsRouter from './routes/registrations.js';
 import matchesRouter from './routes/matches.js';
@@ -120,7 +120,36 @@ app.use('/api', (req, res, next) => {
 });
 
 // ── Routes ──────────────────────────────────────────────────
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+// Maintenance mode: flip MAINTENANCE_MODE on (1/true/on/yes) to show the
+// "Under Maintenance" page. MAINTENANCE_MESSAGE customizes the copy shown.
+const MAINTENANCE_ENABLED = () =>
+  ['1', 'true', 'on', 'yes'].includes(String(process.env.MAINTENANCE_MODE || '').toLowerCase());
+
+// While maintenance is on, refuse state-changing API requests so visitors
+// can't register teams or alter data mid-maintenance. Reads stay open, the
+// super admin keeps full access (to manage the site), and the admin login
+// itself is the recovery path — always allowed.
+app.use('/api', async (req, res, next) => {
+  if (!MAINTENANCE_ENABLED()) return next();
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  if (req.path === '/auth/admin-login') return next();
+  try {
+    if (await isAdmin(req)) return next();
+  } catch {
+    /* malformed token → treat as a regular visitor */
+  }
+  res.status(503).json({ error: 'The site is under maintenance. Please try again later.' });
+});
+
+app.get('/api/health', (req, res) =>
+  res.json({ ok: true, maintenance: MAINTENANCE_ENABLED() })
+);
+app.get('/api/maintenance', (req, res) =>
+  res.json({
+    maintenance: MAINTENANCE_ENABLED(),
+    message: process.env.MAINTENANCE_MESSAGE || null,
+  })
+);
 app.get('/api/admin/check', requireAdmin, (req, res) => res.json({ ok: true }));
 app.use('/api/stats', statsRouter);
 app.use('/api/tournaments', tournamentsRouter);
