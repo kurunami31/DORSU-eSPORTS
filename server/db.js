@@ -17,6 +17,13 @@ dotenv.config({
 
 const usePostgres = Boolean(process.env.DATABASE_URL);
 
+if (!usePostgres && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'DATABASE_URL is required in production. Add your Supabase connection ' +
+      'string to the Vercel environment variables.'
+  );
+}
+
 export const db = usePostgres
   ? (await import('./drivers/postgres.js')).default
   : (await import('./drivers/sqlite.js')).default;

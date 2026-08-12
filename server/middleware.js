@@ -2,22 +2,23 @@ import crypto from 'node:crypto';
 
 // Admin passcode.
 // - Local dev: defaults to 'stallions' for convenience.
-// - Production (NODE_ENV=production, e.g. Vercel): MUST be set explicitly —
-//   a hardcoded default passcode in production is a real vulnerability.
+// - Production (NODE_ENV=production, e.g. Vercel): must be set explicitly.
+//   There is NO default in production — a hardcoded passcode would be
+//   guessable. Admin routes refuse to work (503) until ADMIN_PASSCODE is set,
+//   while the public site keeps serving.
 const isProd = process.env.NODE_ENV === 'production';
-if (isProd && !process.env.ADMIN_PASSCODE) {
-  throw new Error(
-    'ADMIN_PASSCODE environment variable is required in production. ' +
-      'Set it in your Vercel project environment settings.'
-  );
-}
-export const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || 'stallions';
+export const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || (isProd ? null : 'stallions');
 
-const ADMIN_KEY = Buffer.from(ADMIN_PASSCODE);
+if (isProd && !process.env.ADMIN_PASSCODE) {
+  console.warn('[security] ADMIN_PASSCODE is not set — admin routes are disabled. ' +
+    'Add it to your Vercel environment variables.');
+}
+
+const ADMIN_KEY = ADMIN_PASSCODE ? Buffer.from(ADMIN_PASSCODE) : null;
 
 // Constant-time comparison — no early exit on length/char mismatches.
 export function checkAdminKey(key) {
-  if (!key) return false;
+  if (!key || !ADMIN_KEY) return false;
   const a = Buffer.from(String(key));
   const b = ADMIN_KEY;
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -26,6 +27,9 @@ export function checkAdminKey(key) {
 export const isAdmin = (req) => checkAdminKey(req.get('x-admin-key'));
 
 export function requireAdmin(req, res, next) {
+  if (!ADMIN_PASSCODE) {
+    return res.status(503).json({ error: 'Admin access is not configured. Set the ADMIN_PASSCODE environment variable.' });
+  }
   if (!isAdmin(req)) {
     return res.status(401).json({ error: 'Unauthorized. Provide the admin passcode.' });
   }
