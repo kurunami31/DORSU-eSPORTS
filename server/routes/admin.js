@@ -1,15 +1,14 @@
 import { Router } from 'express';
 import { db } from '../db.js';
-import { requireAdmin, asyncHandler } from '../middleware.js';
+import { requireAdmin, requireStaff, asyncHandler } from '../middleware.js';
 import { ValidationError, optionalStr } from '../validate.js';
 
 const router = Router();
 
-// All routes here are super-admin only.
-router.use(requireAdmin);
+const ROLES = ['player', 'moderator', 'admin'];
 
-// ── Rich statistics for the admin overview ─────────────────
-router.get('/stats', asyncHandler(async (req, res) => {
+// ── Rich statistics (staff: super admin + moderator) ───────
+router.get('/stats', requireStaff, asyncHandler(async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
 
   const [counts, byStatus, byGame, gameTeams, recent, deadlines, top] =
@@ -73,6 +72,9 @@ router.get('/stats', asyncHandler(async (req, res) => {
   });
 }));
 
+// Everything below is super-admin only.
+router.use(requireAdmin);
+
 // ── Player accounts ────────────────────────────────────────
 router.get('/users', asyncHandler(async (req, res) => {
   const q = String(req.query.q || '').trim().slice(0, 60);
@@ -97,6 +99,51 @@ router.get('/users', asyncHandler(async (req, res) => {
     : await db.all(`${base} ORDER BY u.created_at DESC`);
 
   res.json(rows);
+}));
+
+// ── Change an account's role (super admin only) ─────────────
+// A player can be promoted to moderator (or another admin) and any staff
+// member can be demoted. Your own role can never be changed from the panel —
+// that guard keeps an admin from accidentally locking themselves out.
+router.patch('/users/:id/role', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) throw new ValidationError('Invalid user id.');
+
+  if (id === req.user.id) {
+    return res.status(400).json({ error: 'You cannot change your own role.' });
+  }
+
+  const role = String(req.body.role || '').trim().toLowerCase();
+  if (!ROLES.includes(role)) {
+    throw new ValidationError('Role must be player, moderator, or admin.');
+  }
+
+  const target = await db.get('SELECT * FROM users WHERE id = ?', [id]);
+  if (!target) return res.status(404).json({ error: 'Account not found.' });
+
+  // Staff accounts can sign in at /admin with a username. Collect one when
+  // promoting (or keep the existing one) so a fresh moderator isn't left
+  // without a way into the panel.
+  let username = target.username;
+  if (role !== 'player' && req.body.username !== undefined) {
+    username = optionalStr(req.body.username, { name: 'Username', min: 2, max: 60 }) || null;
+  }
+
+  if (username && String(username).toLowerCase() !== String(target.username || '').toLowerCase()) {
+    const taken = await db.get(
+      'SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?',
+      [username, id]
+    );
+    if (taken) throw new ValidationError('That username is already taken.');
+  }
+
+  await db.run('UPDATE users SET role = ?, username = ? WHERE id = ?', [role, username, id]);
+
+  const user = await db.get(
+    'SELECT id, name, username, email, role, created_at FROM users WHERE id = ?',
+    [id]
+  );
+  res.json(user);
 }));
 
 // ── Delete a player account (super admins are protected) ───

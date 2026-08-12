@@ -76,21 +76,22 @@ router.post('/login', asyncHandler(async (req, res) => {
   res.json({ token, user: toPublicUser(user) });
 }));
 
-// Super admin sign-in — username + password for /admin. Player accounts can
-// never reach this role, and unknown usernames run a dummy scrypt so the
-// response timing never reveals which usernames exist.
+// Staff sign-in — username + password for /admin. Accepts super admins and
+// moderators (both staff roles reach the panel). Player accounts can never
+// reach these roles, and unknown usernames run a dummy scrypt so the response
+// timing never reveals which usernames exist.
 router.post('/admin-login', asyncHandler(async (req, res) => {
   const username = requiredStr(req.body.username, { name: 'Username', min: 2, max: 60 }).toLowerCase();
   const password = String(req.body.password ?? '');
 
   const user = await db.get(
-    "SELECT * FROM users WHERE LOWER(username) = ? AND role = 'admin'",
+    "SELECT * FROM users WHERE LOWER(username) = ? AND role IN ('admin', 'moderator')",
     [username]
   );
   const valid = verifyPassword(password, user ? user.password_hash : DUMMY_HASH);
 
   if (!valid) {
-    throw new ValidationError('Invalid admin username or password.');
+    throw new ValidationError('Invalid staff username or password.');
   }
 
   const token = await createSession(user.id);

@@ -5,7 +5,7 @@ import {
   createTournament, updateTournament, deleteTournament, generateBrackets,
   deleteRegistration, getAnnouncements, createAnnouncement, updateAnnouncement,
   deleteAnnouncement,
-  getAdminStats, getAdminUsers, deleteAdminUser, setMaintenance, getMaintenance,
+  getAdminStats, getAdminUsers, deleteAdminUser, setUserRole, setMaintenance, getMaintenance,
 } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
@@ -28,7 +28,9 @@ const EMPTY_ANNOUNCEMENT = { title: '', body: '', category: 'General', pinned: f
 
 export default function Admin() {
   const { user, ready, loginAdmin } = useAuth();
-  const isAdmin = user && user.role === 'admin';
+  // Staff = super admin or moderator. Both manage the panel; the super admin
+  // alone gets accounts, roles, tournaments, and system controls.
+  const isStaff = user && (user.role === 'admin' || user.role === 'moderator');
 
   if (!ready) {
     return (
@@ -38,11 +40,11 @@ export default function Admin() {
     );
   }
 
-  if (!isAdmin) return <Gate onLogin={loginAdmin} />;
+  if (!isStaff) return <Gate onLogin={loginAdmin} />;
   return <Dashboard />;
 }
 
-/* ── Super admin gate (username + password) ─────────────── */
+/* ── Staff gate (username + password) ───────────────────── */
 function Gate({ onLogin }) {
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
@@ -71,9 +73,9 @@ function Gate({ onLogin }) {
             <div style={{ width: 60, height: 60, margin: '0 auto 12px', borderRadius: 18, display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg, var(--blue-soft), var(--yellow-soft))', border: '1px solid var(--line-strong)', color: 'var(--yellow)' }} aria-hidden="true">
               <Icon name="lock" size={26} />
             </div>
-            <h2 style={{ fontSize: 24 }}>Super Admin</h2>
+            <h2 style={{ fontSize: 24 }}>Staff Sign In</h2>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 6 }}>
-              Sign in with the super admin account to manage tournaments and announcements.
+              Sign in with a super admin or moderator account to open the panel.
             </p>
           </div>
           {error && <div className="form-error" role="alert">{error}</div>}
@@ -107,7 +109,7 @@ function Gate({ onLogin }) {
             {busy ? <span className="spin" /> : <Icon name="lockOpen" size={15} />} Sign In
           </button>
           <p style={{ color: 'var(--muted-2)', fontSize: 12.5, textAlign: 'center', marginTop: 14 }}>
-            Only the super admin account can access this panel.
+            Staff access only — super admins and moderators.
           </p>
         </form>
       </div>
@@ -118,7 +120,8 @@ function Gate({ onLogin }) {
 /* ── Dashboard ──────────────────────────────────────────── */
 function Dashboard() {
   const [tab, setTab] = useState('overview');
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   return (
     <>
@@ -161,20 +164,22 @@ function Dashboard() {
             >
               <Icon name="megaphone" size={14} /> Announcements
             </button>
-            <button
-              role="tab"
-              aria-selected={tab === 'players'}
-              className={`filter-tab ${tab === 'players' ? 'active' : ''}`}
-              onClick={() => setTab('players')}
-            >
-              <Icon name="users" size={14} /> Players
-            </button>
+            {isAdmin && (
+              <button
+                role="tab"
+                aria-selected={tab === 'players'}
+                className={`filter-tab ${tab === 'players' ? 'active' : ''}`}
+                onClick={() => setTab('players')}
+              >
+                <Icon name="users" size={14} /> Players
+              </button>
+            )}
           </div>
 
-          {tab === 'overview' && <OverviewPanel />}
-          {tab === 'tournaments' && <TournamentsPanel />}
+          {tab === 'overview' && <OverviewPanel isAdmin={isAdmin} />}
+          {tab === 'tournaments' && <TournamentsPanel isAdmin={isAdmin} />}
           {tab === 'announcements' && <AnnouncementsPanel />}
-          {tab === 'players' && <PlayersPanel />}
+          {tab === 'players' && isAdmin && <PlayersPanel />}
         </div>
       </section>
     </>
@@ -182,7 +187,7 @@ function Dashboard() {
 }
 
 /* ── Overview panel (stats + system controls) ───────────── */
-function OverviewPanel() {
+function OverviewPanel({ isAdmin }) {
   const [stats, setStats] = useState(null);
 
   const load = () => getAdminStats().then(setStats).catch(() => setStats(null));
@@ -318,10 +323,12 @@ function OverviewPanel() {
           )}
         </div>
 
-        <div className="card admin-card">
-          <h4><Icon name="shield" size={15} /> System Controls</h4>
-          <MaintenanceControl />
-        </div>
+        {isAdmin && (
+          <div className="card admin-card">
+            <h4><Icon name="shield" size={15} /> System Controls</h4>
+            <MaintenanceControl />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -408,6 +415,72 @@ function MaintenanceControl() {
       <p style={{ color: 'var(--muted-2)', fontSize: 12, marginTop: 12 }}>
         Tip: a MAINTENANCE_MODE environment variable overrides this switch while it is set.
       </p>
+    </div>
+  );
+}
+
+const ROLE_OPTIONS = [
+  { value: 'player', label: 'Player' },
+  { value: 'moderator', label: 'Moderator' },
+  { value: 'admin', label: 'Super Admin' },
+];
+
+/* ── Inline role editor (super admin only) ──────────────── */
+function RoleEditor({ account, me, onChanged }) {
+  const isMe = account.id === me?.id;
+  const [role, setRole] = useState(account.role);
+  const [username, setUsername] = useState(account.username || '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const save = async (nextRole) => {
+    setRole(nextRole);
+    setErr('');
+    setBusy(true);
+    try {
+      const updated = await setUserRole(account.id, nextRole, nextRole === 'player' ? undefined : username);
+      setUsername(updated.username || '');
+      if (onChanged) onChanged(updated);
+    } catch (e) {
+      setErr(e.message || 'Failed to update role.');
+      setRole(account.role);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="role-editor">
+      <select
+        className="role-select"
+        aria-label={`Role for ${account.name}`}
+        value={role}
+        disabled={isMe || busy}
+        onChange={(e) => save(e.target.value)}
+      >
+        {ROLE_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      {isMe ? (
+        <span className="u-email">You</span>
+      ) : role !== 'player' ? (
+        <div className="role-username-row">
+          <input
+            className="input"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="sign-in username"
+            aria-label={`Sign-in username for ${account.name}`}
+          />
+          {username.trim() !== (account.username || '') && (
+            <button className="btn btn-blue btn-sm" disabled={busy} onClick={() => save(role)}>
+              <Icon name="check" size={13} /> Save
+            </button>
+          )}
+        </div>
+      ) : null}
+      {err && <div className="u-email" style={{ color: 'var(--danger)' }}>{err}</div>}
     </div>
   );
 }
@@ -507,9 +580,7 @@ function PlayersPanel() {
                   </td>
                   <td className="u-email">{u.email}</td>
                   <td>
-                    <span className={`role-chip ${u.role}`}>
-                      {u.role === 'admin' ? 'Super Admin' : 'Player'}
-                    </span>
+                    <RoleEditor account={u} me={me} onChanged={() => load(query)} />
                   </td>
                   <td style={{ color: 'var(--muted)' }}>{u.registrations}</td>
                   <td className="u-email">{formatDate(u.created_at)}</td>
@@ -535,7 +606,7 @@ function PlayersPanel() {
 }
 
 /* ── Tournaments panel ──────────────────────────────────── */
-function TournamentsPanel() {
+function TournamentsPanel({ isAdmin }) {
   const [tournaments, setTournaments] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -640,10 +711,19 @@ function TournamentsPanel() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 22 }}>Manage Tournaments</h2>
-        <button className="btn btn-primary btn-sm" onClick={startCreate}>
-          <Icon name="plus" size={15} /> New Tournament
-        </button>
+        <div>
+          <h2 style={{ fontSize: 22 }}>{isAdmin ? 'Manage Tournaments' : 'Moderate Teams'}</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
+            {isAdmin
+              ? 'Create, edit, and run the tournament schedule.'
+              : 'Tournaments are managed by the super admin. You can review team lists and remove rule-breaking entries.'}
+          </p>
+        </div>
+        {isAdmin && (
+          <button className="btn btn-primary btn-sm" onClick={startCreate}>
+            <Icon name="plus" size={15} /> New Tournament
+          </button>
+        )}
       </div>
 
       {msg && <div className={msgType === 'error' ? 'form-error' : 'form-success'}>{msg}</div>}
@@ -725,25 +805,29 @@ function TournamentsPanel() {
                   <button className="btn btn-blue btn-sm" onClick={() => toggleTeams(t)}>
                     {expanded === t.id ? 'Hide Teams' : `Teams (${t.registered_count})`}
                   </button>
-                  {t.status !== 'finished' && !t.bracket && (
+                  {isAdmin && t.status !== 'finished' && !t.bracket && (
                     <button className="btn btn-primary btn-sm" onClick={() => doGenerate(t)}>
                       <Icon name="dice" size={14} /> Generate Brackets
                     </button>
                   )}
-                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit(t)}>
-                    <Icon name="pencil" size={13} /> Edit
-                  </button>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={async () => {
-                      if (window.confirm(`Delete "${t.name}"? This removes its registrations too.`)) {
-                        await deleteTournament(t.id);
-                        await load();
-                      }
-                    }}
-                  >
-                    Delete
-                  </button>
+                  {isAdmin && (
+                    <button className="btn btn-ghost btn-sm" onClick={() => startEdit(t)}>
+                      <Icon name="pencil" size={13} /> Edit
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={async () => {
+                        if (window.confirm(`Delete "${t.name}"? This removes its registrations too.`)) {
+                          await deleteTournament(t.id);
+                          await load();
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
                   <Link to={`/tournaments/${t.id}`} className="btn btn-ghost btn-sm">View →</Link>
                 </div>
               </div>

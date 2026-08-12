@@ -40,6 +40,9 @@ export const getBracket = (id) => api(`/tournaments/${id}/bracket`);
 export const getRegistrations = (tournamentId) => api(`/tournaments/${tournamentId}/registrations`);
 export const getAnnouncements = (limit) => api(`/announcements${limit ? `?limit=${limit}` : ''}`);
 
+export const sendChat = (messages) =>
+  api('/chat', { method: 'POST', body: JSON.stringify({ messages }) });
+
 export const createTournament = (data) =>
   api('/tournaments', { method: 'POST', body: JSON.stringify(data) });
 export const updateTournament = (id, data) =>
@@ -61,6 +64,8 @@ export const setWinner = (matchId, winnerId) =>
 export const getAdminStats = () => api('/admin/stats');
 export const getAdminUsers = (q) => api(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`);
 export const deleteAdminUser = (id) => api(`/admin/users/${id}`, { method: 'DELETE' });
+export const setUserRole = (id, role, username) =>
+  api(`/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role, username }) });
 export const setMaintenance = (enabled, message) =>
   api('/admin/maintenance', { method: 'PUT', body: JSON.stringify({ enabled, message }) });
 

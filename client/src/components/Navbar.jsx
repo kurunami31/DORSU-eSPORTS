@@ -33,6 +33,17 @@ export default function Navbar() {
                 </NavLink>
               </li>
             ))}
+            {ready && user && (user.role === 'admin' || user.role === 'moderator') && (
+              <li className="nav-link-staff">
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) => (isActive ? 'active' : '')}
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon name="shield" size={13} /> Panel
+                </NavLink>
+              </li>
+            )}
             {ready && (
               <li className={user ? 'nav-link-user' : 'nav-link-user nav-link-mobile-only'}>
                 <NavLink

@@ -8,7 +8,8 @@ The official competitive gaming website for **Davao Oriental State University**'
 - **Registrations** — public team sign-up with captain info and roster builder; slot limits, registration deadlines, and duplicate team-name checks are enforced server-side (transactionally)
 - **Announcements** — categorized feed (Tournament / General / Community / Patch) with pinned posts
 - **Player accounts** — sign up / sign in at **/login**; scrypt-hashed passwords, 30-day bearer sessions, and one-tap prefilled team registration
-- **Admin panel** — super-admin-protected dashboard (username + password) to create/edit tournaments, generate brackets, advance matches, manage registrations, and publish announcements
+- **AI assistant** — a floating **DOrSU eSPORTS Assist** chat widget (bottom-right) answers visitors about open tournaments, registration, and the org — powered by **Groq** (Llama 3.3 70B), grounded in live site data, rate-limited, and safe for the public (no staff/internal details)
+- **Admin panel** — super-admin-protected dashboard (username + password) to create/edit tournaments, generate brackets, advance matches, manage registrations, publish announcements, manage player accounts, assign moderator roles, and toggle maintenance
 - **Live bracket UI** — SVG-connected round columns, winner highlighting, and click-to-advance in admin mode
 - Dark esports theme with DOrSU blue/yellow and a woven **Dagmay** textile motif
 
@@ -80,6 +81,7 @@ The repo is configured to deploy as one Vercel project: the **static client** (f
 3. Framework preset: **Other** — `vercel.json` already sets the build command and output directory
 4. Add environment variables:
    - `DATABASE_URL` — your Supabase transaction pooler URI (above)
+   - `GROQ_API_KEY` — your Groq API key (`gsk_…`) to enable the AI assistant
 5. Click **Deploy** — the client and `/api` go live together
 
 ### Option B — Vercel CLI
@@ -95,7 +97,7 @@ vercel --prod              # production
 
 - **Security headers** — CSP (scripts/styles/fonts locked down, framing denied), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, HSTS, strict `Referrer-Policy`, and a `Permissions-Policy` that blocks camera/mic/geolocation — set by `helmet` on the API and by `vercel.json` headers on the static site
 - **Rate limiting** — 500 req/15 min per IP globally, 10 registrations/15 min per IP, 30 auth attempts/15 min (covers admin login), 120 state-changing ops/15 min (rate limits are per-serverless-instance — soft limits, acceptable for this scale)
-- **Admin auth** — the admin panel is protected by a **super admin account** (role-based, scrypt-hashed password, login via username + password). Player accounts can never reach the admin role; every admin route requires a valid admin session
+- **Admin auth** — the admin panel is protected by **staff accounts** with a role hierarchy: `player` < `moderator` < `admin` (super admin). Staff log in with username + password (scrypt-hashed). Moderators can moderate teams + publish announcements and see site stats; super admins additionally manage tournaments, player accounts, roles, and system controls. Player accounts can never reach a staff role on their own — only a super admin can assign one
 - **Player auth** — scrypt password hashing (N=16384, per-user salt, constant-time verify); opaque 256-bit session tokens of which only the SHA-256 hash is stored in the DB (a leak never exposes live sessions); tokens expire after 30 days and are destroyed on logout; login timing is equalized so responses never reveal whether an email is registered
 - **Input validation** — length caps on every field, email format, roster caps, integer/date/status/format whitelists, registration deadline ≤ start date; request bodies capped at 100 KB
 - **Privacy** — public registration lists expose only team name, captain name, and date; emails, contacts, and rosters are returned only to authenticated admins
@@ -109,11 +111,15 @@ vercel --prod              # production
 - The Supabase **service_role** key is not used by the app at all (we connect via Postgres directly). If it was ever shared, regenerate it in **Project Settings → API**
 - If the database password was shared, reset it in **Project Settings → Database → Reset database password** and update `DATABASE_URL`
 
-## 🔐 Admin Access
+## 🔐 Staff Access (Roles)
 
-- Visit **/admin** on the deployed site (there is no public link to it)
-- Sign in with the **super admin account**: username `esportadmin` · password `dorsuesports2026`
-- The account is created by the seed script (`server/seed.js` — see `SUPER_ADMIN`) with the password stored as a scrypt hash. To change it, update `SUPER_ADMIN` in `seed.js` and re-run `npm run seed`
+- Visit **/admin** on the deployed site (there is no public link to it; signed-in staff also see a **Panel** link in the navbar)
+- Sign in with a **staff account**: username + password (super admins and moderators both use this form)
+- **Super admin** (seed): username `esportadmin` · password `dorsuesports2026`
+- **Moderators** are promoted by the super admin from existing player accounts — **Players tab → Role** dropdown (you can also set their sign-in username there). Their access:
+  - ✅ Site overview stats, publish/edit/delete announcements, review team lists + remove rule-breaking registrations, full team-list detail view
+  - ❌ No tournament create/edit/delete, no bracket generation, no account management, no role changes, no maintenance toggle
+- The super admin account is created by the seed script (`server/seed.js` — see `SUPER_ADMIN`) with the password stored as a scrypt hash. To change it, update `SUPER_ADMIN` in `seed.js` and re-run `npm run seed`
 
 ## 📡 API Overview
 
@@ -127,7 +133,7 @@ vercel --prod              # production
 | GET | `/api/tournaments/:id/bracket` | Resolved bracket |
 | POST | `/api/auth/signup` | Create account → returns session token |
 | POST | `/api/auth/login` | Sign in → returns session token |
-| POST | `/api/auth/admin-login` | Super admin sign-in (username + password) |
+| POST | `/api/auth/admin-login` | Staff sign-in (username + password — super admin or moderator) |
 | GET | `/api/auth/me` | Current signed-in user |
 | POST | `/api/auth/logout` | Invalidate the current session |
 | POST | `/api/tournaments/:id/registrations` | Register a team (public) |
@@ -137,13 +143,15 @@ vercel --prod              # production
 | POST / PATCH / DELETE | `/api/announcements[/:id]` | Manage announcements *(admin)* |
 | GET | `/api/stats` | Site-wide stats |
 | GET | `/api/maintenance` | Maintenance flag + message (env var or panel setting) |
+| POST | `/api/chat` | AI assistant reply (Groq, requires `GROQ_API_KEY`) |
 | GET | `/api/health` | Liveness probe (+ current `maintenance` flag) |
-| GET | `/api/admin/stats` | Rich dashboard stats (game/status breakdowns, recent sign-ups, deadlines) *(admin)* |
+| GET | `/api/admin/stats` | Rich dashboard stats (game/status breakdowns, recent sign-ups, deadlines) *(staff)* |
 | GET | `/api/admin/users` | List player accounts (+ `?q=` search) *(admin)* |
-| DELETE | `/api/admin/users/:id` | Delete a player account (admins protected) *(admin)* |
+| PATCH | `/api/admin/users/:id/role` | Set a role: `player` / `moderator` / `admin` (+ optional `username` for staff) *(admin)* |
+| DELETE | `/api/admin/users/:id` | Delete a player account (staff accounts protected) *(admin)* |
 | PUT | `/api/admin/maintenance` | Toggle maintenance mode + set message live from the panel *(admin)* |
 
-Admin routes require `Authorization: Bearer <admin-session-token>` (obtained via `POST /api/auth/admin-login`).
+Staff routes require `Authorization: Bearer <staff-session-token>` (obtained via `POST /api/auth/admin-login`).
 
 ## 🚧 Maintenance mode
 
@@ -152,7 +160,7 @@ Flip the site to a full-screen **"Under Maintenance"** page while you roll out u
 1. Set `MAINTENANCE_MODE=1` in the environment (Vercel project settings, or your local `.env`) — `MAINTENANCE_MESSAGE` optionally customizes the copy shown
 2. Redeploy / restart the API
 3. Visitors see the branded maintenance page; the page **auto-recovers** (polls every 60s and on tab focus) the moment `MAINTENANCE_MODE` is removed
-4. The super admin (`esportadmin`) can still access the site so the panel stays usable to turn maintenance off
+4. Staff (super admin + moderator) can still access the site so the panel stays usable to turn maintenance off
 
 ## 🗂 Project Structure
 
@@ -180,5 +188,7 @@ Flip the site to a full-screen **"Under Maintenance"** page while you roll out u
 | `PORT` | API port for local dev (default `5000`) |
 | `MAINTENANCE_MODE` | Set to `1`/`true`/`on` to show the "Under Maintenance" page site-wide (default off) |
 | `MAINTENANCE_MESSAGE` | Optional custom message shown on the maintenance page |
+| `GROQ_API_KEY` | Groq API key for the AI assistant (`gsk_…`). Omit to leave the chat widget showing "not connected" |
+| `GROQ_MODEL` | Optional Groq model override (default `llama-3.3-70b-versatile`) |
 
 > **Super admin credentials** are constants in `server/seed.js` (`SUPER_ADMIN.username` / `SUPER_ADMIN.password`) — they are *not* environment variables. Change them there and re-run `npm run seed`.

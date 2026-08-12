@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
-import { requireAdmin, asyncHandler } from '../middleware.js';
+import { requireStaff, asyncHandler } from '../middleware.js';
 import { requiredStr, optionalStr } from '../validate.js';
 
 const router = Router();
@@ -42,8 +42,8 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json(rows);
 }));
 
-// Create announcement (admin)
-router.post('/', requireAdmin, asyncHandler(async (req, res) => {
+// Create announcement (staff: super admin or moderator)
+router.post('/', requireStaff, asyncHandler(async (req, res) => {
   const data = validateAnnouncementInput(req.body);
   const result = await db.run(
     'INSERT INTO announcements (title, body, category, pinned) VALUES (?, ?, ?, ?)',
@@ -52,8 +52,8 @@ router.post('/', requireAdmin, asyncHandler(async (req, res) => {
   res.status(201).json(await db.get('SELECT * FROM announcements WHERE id = ?', [result.lastInsertRowid]));
 }));
 
-// Update announcement (admin)
-router.patch('/:id', requireAdmin, asyncHandler(async (req, res) => {
+// Update announcement (staff)
+router.patch('/:id', requireStaff, asyncHandler(async (req, res) => {
   const a = await db.get('SELECT * FROM announcements WHERE id = ?', [req.params.id]);
   if (!a) return res.status(404).json({ error: 'Announcement not found' });
 
@@ -70,8 +70,8 @@ router.patch('/:id', requireAdmin, asyncHandler(async (req, res) => {
   res.json(await db.get('SELECT * FROM announcements WHERE id = ?', [a.id]));
 }));
 
-// Delete announcement (admin)
-router.delete('/:id', requireAdmin, asyncHandler(async (req, res) => {
+// Delete announcement (staff)
+router.delete('/:id', requireStaff, asyncHandler(async (req, res) => {
   const result = await db.run('DELETE FROM announcements WHERE id = ?', [req.params.id]);
   if (result.changes === 0) return res.status(404).json({ error: 'Announcement not found' });
   res.json({ ok: true });

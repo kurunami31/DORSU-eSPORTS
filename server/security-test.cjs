@@ -14,8 +14,10 @@ function check(name, cond, extra = '') {
 
 async function req(path, opts = {}) {
   const res = await fetch(BASE + path, {
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
     ...opts,
+    // Merged last: custom headers must never drop Content-Type, or express
+    // won't parse the body and every handler sees an empty req.body.
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
   });
   let body = null;
   try {
@@ -62,6 +64,71 @@ async function req(path, opts = {}) {
   });
   check('player token → 403', player.status === 201 &&
     (await req('/api/tournaments', { method: 'POST', headers: { Authorization: `Bearer ${player.body.token}` }, body: JSON.stringify({ name: 'Nope', game: 'X' }) })).status === 403);
+
+  console.log('1c. Moderator role — staff permissions');
+  // Unique username per run — earlier runs leave demoted candidates behind,
+  // so a fixed name would collide with the DB unique-index on usernames.
+  const modUsername = `modtest${String(Date.now()).slice(-6)}`;
+  const mod = await req('/api/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'Mod Candidate', email: `mod${Date.now()}@dorsu.edu.ph`, password: 'modpass99' }),
+  });
+  check('moderator candidate signup 201', mod.status === 201);
+  const modId = mod.body && mod.body.user ? mod.body.user.id : null;
+  const promote = await req(`/api/admin/users/${modId}/role`, {
+    method: 'PATCH',
+    headers: adminHeaders,
+    body: JSON.stringify({ role: 'moderator', username: modUsername }),
+  });
+  check('admin promotes player → moderator 200', promote.status === 200 && promote.body && promote.body.role === 'moderator');
+  check('promotion sets sign-in username', promote.body && promote.body.username === modUsername);
+  check('staff login accepts moderator', (await req('/api/auth/admin-login', {
+    method: 'POST',
+    body: JSON.stringify({ username: modUsername, password: 'modpass99' }),
+  })).status === 200);
+  const modLogin = await req('/api/auth/admin-login', {
+    method: 'POST',
+    body: JSON.stringify({ username: modUsername, password: 'modpass99' }),
+  });
+  const modHeaders = { Authorization: `Bearer ${modLogin.body ? modLogin.body.token : ''}` };
+  check('moderator creates announcement 201', (await req('/api/announcements', {
+    method: 'POST', headers: modHeaders, body: JSON.stringify({ title: 'Mod note', body: 'x' }),
+  })).status === 201);
+  check('moderator views admin stats 200', (await req('/api/admin/stats', { headers: modHeaders })).status === 200);
+  check('moderator cannot create tournament 403', (await req('/api/tournaments', {
+    method: 'POST', headers: modHeaders, body: JSON.stringify({ name: 'Nope', game: 'X' }),
+  })).status === 403);
+  check('moderator cannot list users 403', (await req('/api/admin/users', { headers: modHeaders })).status === 403);
+  check('moderator cannot change roles 403', (await req(`/api/admin/users/${modId}/role`, {
+    method: 'PATCH', headers: modHeaders, body: JSON.stringify({ role: 'admin' }),
+  })).status === 403);
+  check('moderator cannot toggle maintenance 403', (await req('/api/admin/maintenance', {
+    method: 'PUT', headers: modHeaders, body: JSON.stringify({ enabled: false }),
+  })).status === 403);
+  // Moderators police the team lists — create a team, then remove it.
+  const policeReg = await req('/api/tournaments/2/registrations', {
+    method: 'POST',
+    body: JSON.stringify({ team_name: `Mod Police ${Date.now()}`, captain_name: 'Mo', email: 'modpolice@dorsu.edu.ph' }),
+  });
+  check('registration created for moderation test', policeReg.status === 201);
+  check('moderator removes registration 200', (await req(`/api/registrations/${policeReg.body ? policeReg.body.id : 0}`, {
+    method: 'DELETE', headers: modHeaders,
+  })).status === 200);
+
+  console.log('1d. Role-change guards');
+  const adminId = adm.body.user.id;
+  check('self-demotion rejected 400', (await req(`/api/admin/users/${adminId}/role`, {
+    method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ role: 'player' }),
+  })).status === 400);
+  check('invalid role rejected 400', (await req(`/api/admin/users/${modId}/role`, {
+    method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ role: 'owner' }),
+  })).status === 400);
+  check('duplicate username rejected 400', (await req(`/api/admin/users/${modId}/role`, {
+    method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ role: 'moderator', username: 'esportadmin' }),
+  })).status === 400);
+  check('admin demotes moderator → player 200', (await req(`/api/admin/users/${modId}/role`, {
+    method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ role: 'player' }),
+  })).status === 200);
 
   console.log('2. Input validation — 400s');
   const longTeam = 'T'.repeat(60);

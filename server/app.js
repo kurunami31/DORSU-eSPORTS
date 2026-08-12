@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { requireAdmin, isAdmin, asyncHandler, errorHandler, notFound } from './middleware.js';
+import { requireStaff, isStaff, asyncHandler, errorHandler, notFound } from './middleware.js';
 import { maintenanceEnabled, maintenanceMessage } from './maintenance.js';
 import tournamentsRouter from './routes/tournaments.js';
 import registrationsRouter from './routes/registrations.js';
@@ -10,6 +10,7 @@ import matchesRouter from './routes/matches.js';
 import announcementsRouter from './routes/announcements.js';
 import statsRouter from './routes/stats.js';
 import adminRouter from './routes/admin.js';
+import chatRouter from './routes/chat.js';
 import authRouter from './routes/auth.js';
 
 const app = express();
@@ -109,9 +110,18 @@ const authLimiter = rateLimit({
   message: json429,
   skip: (req) => req.method === 'GET',
 });
+// AI assistant — each call costs a third-party model, so keep it tight.
+const chatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: json429,
+});
 
 app.use('/api', apiLimiter);
 app.use('/api/admin', adminLimiter);
+app.use('/api/chat', chatLimiter);
 app.use('/api/auth', authLimiter);
 app.use('/api/tournaments/:tournamentId/registrations', registerLimiter);
 app.use('/api', (req, res, next) => {
@@ -127,14 +137,14 @@ app.use('/api', (req, res, next) => {
 
 // While maintenance is on, refuse state-changing API requests so visitors
 // can't register teams or alter data mid-maintenance. Reads stay open (and
-// never pay the maintenance DB check), the super admin keeps full access to
-// manage the site, and the admin login itself is the recovery path — allowed.
+// never pay the maintenance DB check), staff keep full access to manage the
+// site, and the staff login itself is the recovery path — allowed.
 app.use('/api', async (req, res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
   if (!(await maintenanceEnabled())) return next();
   if (req.path === '/auth/admin-login') return next();
   try {
-    if (await isAdmin(req)) return next();
+    if (await isStaff(req)) return next();
   } catch {
     /* malformed token → treat as a regular visitor */
   }
@@ -150,7 +160,7 @@ app.get('/api/maintenance', asyncHandler(async (req, res) =>
     message: await maintenanceMessage(),
   })
 ));
-app.get('/api/admin/check', requireAdmin, (req, res) => res.json({ ok: true }));
+app.get('/api/admin/check', requireStaff, (req, res) => res.json({ ok: true }));
 app.use('/api/stats', statsRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api', registrationsRouter);
@@ -158,6 +168,7 @@ app.use('/api', matchesRouter);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/chat', chatRouter);
 
 app.use(notFound);
 app.use(errorHandler);

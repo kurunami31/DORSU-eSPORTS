@@ -151,6 +151,28 @@ const PATHS = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  messageCircle: <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-8.5-8.5 8.38 8.38 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z" />,
+  send: (
+    <>
+      <path d="m22 2-7 20-4-9-9-4z" />
+      <path d="M22 2 11 13" />
+    </>
+  ),
+  bot: (
+    <>
+      <rect x="4" y="8" width="16" height="12" rx="2.5" />
+      <path d="M12 8V4" />
+      <circle cx="12" cy="2.8" r="1" />
+      <path d="M9 13h.01" /><path d="M15 13h.01" />
+      <path d="M8 17h8" />
+    </>
+  ),
+  refresh: (
+    <>
+      <path d="M21 12a9 9 0 1 1-2.6-6.4" />
+      <path d="M21 3v6h-6" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 18, strokeWidth = 2, className = '', ...rest }) {

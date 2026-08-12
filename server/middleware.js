@@ -5,13 +5,20 @@ import { bearerToken, userFromToken } from './auth.js';
 // not a shared passcode. The client sends the session token the same way
 // player sessions do (Authorization: Bearer <token>).
 
-/** Async: is the request's session token an admin? (for soft-gating) */
-export async function isAdmin(req) {
-  const user = await userFromToken(bearerToken(req));
-  return Boolean(user && user.role === 'admin');
+// Role hierarchy: player < moderator < admin (super admin).
+const STAFF_ROLES = ['admin', 'moderator'];
+
+export function canStaff(user) {
+  return Boolean(user && STAFF_ROLES.includes(user.role));
 }
 
-/** Middleware: 401 unless the request carries a valid admin session. */
+/** Async: is the request's session token staff (admin or moderator)? */
+export async function isStaff(req) {
+  const user = await userFromToken(bearerToken(req));
+  return canStaff(user);
+}
+
+/** Middleware: 401 unless the request carries a valid super-admin session. */
 export async function requireAdmin(req, res, next) {
   try {
     const user = await userFromToken(bearerToken(req));
@@ -20,6 +27,24 @@ export async function requireAdmin(req, res, next) {
     }
     if (user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required.' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** Middleware: 401 unless the request carries a valid staff session
+ *  (super admin or moderator). */
+export async function requireStaff(req, res, next) {
+  try {
+    const user = await userFromToken(bearerToken(req));
+    if (!user) {
+      return res.status(401).json({ error: 'Please sign in to continue.' });
+    }
+    if (!canStaff(user)) {
+      return res.status(403).json({ error: 'Staff access required.' });
     }
     req.user = user;
     next();

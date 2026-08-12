@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
+import ChatWidget from './components/ChatWidget.jsx';
 import Home from './pages/Home.jsx';
 import Tournaments from './pages/Tournaments.jsx';
 import TournamentDetail from './pages/TournamentDetail.jsx';
@@ -16,12 +17,12 @@ import { getMaintenance } from './api.js';
 import { useAuth } from './auth.jsx';
 
 // While maintenance mode is on, visitors see the "Under Maintenance" page.
-// The super admin (role: admin) is allowed through so the site can be
+// Staff (super admin + moderator) are allowed through so the site can be
 // managed — e.g. to flip maintenance off again.
 function MaintenanceGate({ maintenance, children }) {
   const { user, ready } = useAuth();
   const { pathname } = useLocation();
-  const isAdmin = ready && user?.role === 'admin';
+  const isStaff = ready && (user?.role === 'admin' || user?.role === 'moderator');
 
   if (maintenance === null) {
     // First check still in flight — hold the splash so the site never flashes.
@@ -46,9 +47,9 @@ function MaintenanceGate({ maintenance, children }) {
         </div>
       );
     }
-    // The super admin always gets in (to manage + turn maintenance off),
-    // and /admin stays reachable so a lost admin session can be recovered.
-    if (!isAdmin && pathname !== '/admin') {
+    // Staff always get in (to manage + turn maintenance off), and /admin
+    // stays reachable so a lost staff session can be recovered.
+    if (!isStaff && pathname !== '/admin') {
       return <Maintenance message={maintenance.message} />;
     }
   }
@@ -95,6 +96,7 @@ export default function App() {
     <MaintenanceGate maintenance={maintenance}>
       <ScrollToTop />
       <Navbar />
+      <ChatWidget />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />

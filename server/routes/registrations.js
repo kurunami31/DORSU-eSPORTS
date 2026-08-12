@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
-import { requireAdmin, asyncHandler, isAdmin } from '../middleware.js';
+import { requireStaff, asyncHandler, isStaff } from '../middleware.js';
 import { ValidationError, requiredStr, validEmail, parseRoster } from '../validate.js';
 
 const router = Router();
@@ -10,7 +10,7 @@ const PUBLIC_FIELDS = 'id, tournament_id, team_name, captain_name, created_at';
 
 // List registrations for a tournament
 router.get('/tournaments/:tournamentId/registrations', asyncHandler(async (req, res) => {
-  if (await isAdmin(req)) {
+  if (await isStaff(req)) {
     const rows = await db.all(
       'SELECT * FROM registrations WHERE tournament_id = ? ORDER BY created_at ASC',
       [req.params.tournamentId]
@@ -91,8 +91,8 @@ router.post('/tournaments/:tournamentId/registrations', asyncHandler(async (req,
   res.status(201).json({ ...saved, roster });
 }));
 
-// Remove a registration (admin)
-router.delete('/registrations/:id', requireAdmin, asyncHandler(async (req, res) => {
+// Remove a registration (staff — moderators police the team lists)
+router.delete('/registrations/:id', requireStaff, asyncHandler(async (req, res) => {
   const result = await db.run('DELETE FROM registrations WHERE id = ?', [req.params.id]);
   if (result.changes === 0) return res.status(404).json({ error: 'Registration not found' });
   res.json({ ok: true });
