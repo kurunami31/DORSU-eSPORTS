@@ -102,7 +102,7 @@ export default function TournamentDetail() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 34, alignItems: 'start' }}>
+          <div className="detail-grid">
             <div style={{ minWidth: 0 }}>
               {/* Bracket */}
               {hasBracket ? (
@@ -146,7 +146,7 @@ export default function TournamentDetail() {
             </div>
 
             {/* Registration panel */}
-            <div className="card" style={{ padding: 26, position: 'sticky', top: 'calc(var(--nav-h) + 24px)' }}>
+            <div className="card" style={{ padding: 26, position: 'sticky', top: 'calc(var(--nav-h) + 24px)' }} data-sticky-panel>
               <h3 style={{ fontSize: 20, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 10 }}>
                 Entrants
                 <span style={{ fontFamily: 'var(--font-head)', fontSize: 13, color: 'var(--muted)', letterSpacing: '0.08em' }}>

@@ -277,7 +277,7 @@ function TournamentsPanel() {
       {showForm && (
         <form className="card" style={{ padding: 28, marginBottom: 28 }} onSubmit={submit}>
           <h3 style={{ marginBottom: 18 }}>{editing ? `Edit: ${editing.name}` : 'New Tournament'}</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div className="form-grid">
             <div className="field">
               <label>Tournament Name</label>
               <input className="input" value={form.name} onChange={set('name')} placeholder="e.g. Dawn of Legends Cup" required />
@@ -481,7 +481,7 @@ function AnnouncementsPanel() {
             <label>Title</label>
             <input className="input" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div className="form-grid">
             <div className="field">
               <label>Category</label>
               <select className="input" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>

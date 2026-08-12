@@ -163,7 +163,7 @@ export default function Register() {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            <div className="form-grid">
               <div className="field">
                 <label htmlFor="reg-team">Team / Player Name</label>
                 <input
@@ -188,7 +188,7 @@ export default function Register() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            <div className="form-grid">
               <div className="field">
                 <label htmlFor="reg-email">Email</label>
                 <input
@@ -217,7 +217,7 @@ export default function Register() {
               <label>Roster {tournament && tournament.team_size > 1 ? `(up to ${Math.max(tournament.team_size * 2, tournament.team_size + 3)} players)` : '(player tag)'}</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {roster.map((row, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10 }}>
+                  <div key={i} className="form-grid-3">
                     <input
                       className="input"
                       placeholder="Player name"
