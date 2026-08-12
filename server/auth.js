@@ -68,7 +68,7 @@ export async function userFromToken(token) {
     [sha256(token), new Date().toISOString()]
   );
   if (!session) return null;
-  return db.get('SELECT id, name, email, created_at FROM users WHERE id = ?', [session.user_id]);
+  return db.get('SELECT id, name, username, email, role, created_at FROM users WHERE id = ?', [session.user_id]);
 }
 
 export function bearerToken(req) {

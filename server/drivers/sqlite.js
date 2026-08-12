@@ -65,12 +65,14 @@ const SCHEMA = `
     UNIQUE(tournament_id, round, position)
   );
 
-  -- Player accounts (login / signup)
+  -- Player accounts (login / signup). role: 'player' | 'admin' (super admin).
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    username TEXT,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'player',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -91,11 +93,28 @@ const SCHEMA = `
     ON registrations(tournament_id, LOWER(team_name));
 `;
 
+// Idempotent migration for databases created before the role/username columns
+// existed (e.g. an already-seeded Supabase project). SQLite has no
+// ADD COLUMN IF NOT EXISTS, so guard via PRAGMA. The username index lives here
+// (NOT in SCHEMA) because on an old DB the column may not exist yet when the
+// SCHEMA string runs — creating it after the ALTERs is the only safe order.
+function migrateUsers() {
+  const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+  if (!cols.includes('role')) {
+    db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'player'");
+  }
+  if (!cols.includes('username')) {
+    db.exec('ALTER TABLE users ADD COLUMN username TEXT');
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(LOWER(username))');
+}
+
 export default {
   kind: 'sqlite',
 
   async init() {
     db.exec(SCHEMA);
+    migrateUsers();
   },
 
   all(sql, params = []) {

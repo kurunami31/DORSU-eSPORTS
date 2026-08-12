@@ -18,7 +18,7 @@ async function bootstrap() {
   app.listen(PORT, () => {
     console.log(`[api] DOrSU eSPORTS API running at http://localhost:${PORT}`);
     console.log(`   Database: ${DB_KIND === 'sqlite' ? 'SQLite (local file)' : 'Supabase Postgres'}`);
-    console.log(`   Admin passcode: ${process.env.ADMIN_PASSCODE || 'stallions'} (set ADMIN_PASSCODE to change)`);
+    console.log('   Admin: super admin account (esportadmin) — sign in at /admin');
   });
 }
 

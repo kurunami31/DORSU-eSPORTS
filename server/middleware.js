@@ -1,39 +1,31 @@
-import crypto from 'node:crypto';
+import { bearerToken, userFromToken } from './auth.js';
 
-// Admin passcode.
-// - Local dev: defaults to 'stallions' for convenience.
-// - Production (NODE_ENV=production, e.g. Vercel): must be set explicitly.
-//   There is NO default in production — a hardcoded passcode would be
-//   guessable. Admin routes refuse to work (503) until ADMIN_PASSCODE is set,
-//   while the public site keeps serving.
-const isProd = process.env.NODE_ENV === 'production';
-export const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || (isProd ? null : 'stallions');
+// ── Admin authorization ───────────────────────────────────
+// Admin is a role on a user account (see routes/auth.js admin-login),
+// not a shared passcode. The client sends the session token the same way
+// player sessions do (Authorization: Bearer <token>).
 
-if (isProd && !process.env.ADMIN_PASSCODE) {
-  console.warn('[security] ADMIN_PASSCODE is not set — admin routes are disabled. ' +
-    'Add it to your Vercel environment variables.');
+/** Async: is the request's session token an admin? (for soft-gating) */
+export async function isAdmin(req) {
+  const user = await userFromToken(bearerToken(req));
+  return Boolean(user && user.role === 'admin');
 }
 
-const ADMIN_KEY = ADMIN_PASSCODE ? Buffer.from(ADMIN_PASSCODE) : null;
-
-// Constant-time comparison — no early exit on length/char mismatches.
-export function checkAdminKey(key) {
-  if (!key || !ADMIN_KEY) return false;
-  const a = Buffer.from(String(key));
-  const b = ADMIN_KEY;
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
-export const isAdmin = (req) => checkAdminKey(req.get('x-admin-key'));
-
-export function requireAdmin(req, res, next) {
-  if (!ADMIN_PASSCODE) {
-    return res.status(503).json({ error: 'Admin access is not configured. Set the ADMIN_PASSCODE environment variable.' });
+/** Middleware: 401 unless the request carries a valid admin session. */
+export async function requireAdmin(req, res, next) {
+  try {
+    const user = await userFromToken(bearerToken(req));
+    if (!user) {
+      return res.status(401).json({ error: 'Please sign in to continue.' });
+    }
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
   }
-  if (!isAdmin(req)) {
-    return res.status(401).json({ error: 'Unauthorized. Provide the admin passcode.' });
-  }
-  next();
 }
 
 // Express 4 doesn't catch rejected promises from async handlers.

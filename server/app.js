@@ -79,10 +79,10 @@ const registerLimiter = rateLimit({
   message: json429,
   skip: (req) => req.method !== 'POST',
 });
-// Admin passcode verification — the brute-force surface.
+// /api/admin/* — token checks are cheap, but keep a limiter for safety.
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 30,
+  limit: 120,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: json429,

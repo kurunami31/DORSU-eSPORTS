@@ -42,12 +42,25 @@ const email = `player${Date.now()}@dorsu.edu.ph`;
   check('login 200', l.status === 200);
   check('login token works', l.body && typeof l.body.token === 'string');
 
-  console.log('4. Session');
+  console.log('4. Super admin');
+  const badAdm = await req('/api/auth/admin-login', { method: 'POST', body: JSON.stringify({ username: 'esportadmin', password: 'wrong-password1' }) });
+  check('admin wrong password 400', badAdm.status === 400);
+  const unknownAdm = await req('/api/auth/admin-login', { method: 'POST', body: JSON.stringify({ username: 'ghostadmin', password: 'whatever123' }) });
+  check('unknown admin username 400 (generic)', unknownAdm.status === 400);
+  const adm = await req('/api/auth/admin-login', { method: 'POST', body: JSON.stringify({ username: 'esportadmin', password: 'dorsuesports2026' }) });
+  check('admin login 200', adm.status === 200);
+  check('admin user has role admin', adm.body && adm.body.user && adm.body.user.role === 'admin');
+  check('admin token works on /admin/check', (await req('/api/admin/check', { headers: { Authorization: `Bearer ${adm.body.token}` } })).status === 200);
+  check('player token denied on /admin/check', (await req('/api/admin/check', { headers: { Authorization: `Bearer ${token}` } })).status === 403);
+
+  console.log('5. Session');
   check('me 200 with token', (await req('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })).status === 200);
   check('me 401 without token', (await req('/api/auth/me')).status === 401);
   check('me 401 with junk token', (await req('/api/auth/me', { headers: { Authorization: 'Bearer garbage' } })).status === 401);
   check('logout 200', (await req('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })).status === 200);
   check('me 401 after logout', (await req('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })).status === 401);
+  check('admin logout 200', (await req('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${adm.body.token}` } })).status === 200);
+  check('admin/check 401 after admin logout', (await req('/api/admin/check', { headers: { Authorization: `Bearer ${adm.body.token}` } })).status === 401);
 
   console.log(`RESULT: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

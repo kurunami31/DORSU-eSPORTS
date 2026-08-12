@@ -8,7 +8,7 @@ The official competitive gaming website for **Davao Oriental State University**'
 - **Registrations** — public team sign-up with captain info and roster builder; slot limits, registration deadlines, and duplicate team-name checks are enforced server-side (transactionally)
 - **Announcements** — categorized feed (Tournament / General / Community / Patch) with pinned posts
 - **Player accounts** — sign up / sign in at **/login**; scrypt-hashed passwords, 30-day bearer sessions, and one-tap prefilled team registration
-- **Admin panel** — passcode-protected dashboard to create/edit tournaments, generate brackets, advance matches, manage registrations, and publish announcements
+- **Admin panel** — super-admin-protected dashboard (username + password) to create/edit tournaments, generate brackets, advance matches, manage registrations, and publish announcements
 - **Live bracket UI** — SVG-connected round columns, winner highlighting, and click-to-advance in admin mode
 - Dark esports theme with DOrSU blue/yellow and a woven **Dagmay** textile motif
 
@@ -80,7 +80,6 @@ The repo is configured to deploy as one Vercel project: the **static client** (f
 3. Framework preset: **Other** — `vercel.json` already sets the build command and output directory
 4. Add environment variables:
    - `DATABASE_URL` — your Supabase transaction pooler URI (above)
-   - `ADMIN_PASSCODE` — your admin panel passcode
 5. Click **Deploy** — the client and `/api` go live together
 
 ### Option B — Vercel CLI
@@ -95,8 +94,8 @@ vercel --prod              # production
 ## 🛡 Security hardening
 
 - **Security headers** — CSP (scripts/styles/fonts locked down, framing denied), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, HSTS, strict `Referrer-Policy`, and a `Permissions-Policy` that blocks camera/mic/geolocation — set by `helmet` on the API and by `vercel.json` headers on the static site
-- **Rate limiting** — 500 req/15 min per IP globally, 10 registrations/15 min per IP, 30 admin passcode checks/15 min, 30 auth attempts/15 min, 120 state-changing ops/15 min (rate limits are per-serverless-instance — soft limits, acceptable for this scale)
-- **Admin auth** — constant-time passcode comparison (`crypto.timingSafeEqual`); `ADMIN_PASSCODE` is **required** in production (the server refuses to boot without it — no hardcoded default)
+- **Rate limiting** — 500 req/15 min per IP globally, 10 registrations/15 min per IP, 30 auth attempts/15 min (covers admin login), 120 state-changing ops/15 min (rate limits are per-serverless-instance — soft limits, acceptable for this scale)
+- **Admin auth** — the admin panel is protected by a **super admin account** (role-based, scrypt-hashed password, login via username + password). Player accounts can never reach the admin role; every admin route requires a valid admin session
 - **Player auth** — scrypt password hashing (N=16384, per-user salt, constant-time verify); opaque 256-bit session tokens of which only the SHA-256 hash is stored in the DB (a leak never exposes live sessions); tokens expire after 30 days and are destroyed on logout; login timing is equalized so responses never reveal whether an email is registered
 - **Input validation** — length caps on every field, email format, roster caps, integer/date/status/format whitelists, registration deadline ≤ start date; request bodies capped at 100 KB
 - **Privacy** — public registration lists expose only team name, captain name, and date; emails, contacts, and rosters are returned only to authenticated admins
@@ -106,14 +105,15 @@ vercel --prod              # production
 
 ### 🔑 Secrets checklist
 
-- `DATABASE_URL` and `ADMIN_PASSCODE` live only in env vars (Vercel) or the gitignored `.env` — never commit them
+- `DATABASE_URL` lives only in env vars (Vercel) or the gitignored `.env` — never commit it
 - The Supabase **service_role** key is not used by the app at all (we connect via Postgres directly). If it was ever shared, regenerate it in **Project Settings → API**
 - If the database password was shared, reset it in **Project Settings → Database → Reset database password** and update `DATABASE_URL`
 
 ## 🔐 Admin Access
 
-- Visit **/admin** on the deployed site
-- The passcode is the `ADMIN_PASSCODE` environment variable (local default: `stallions`)
+- Visit **/admin** on the deployed site (there is no public link to it)
+- Sign in with the **super admin account**: username `esportadmin` · password `dorsuesports2026`
+- The account is created by the seed script (`server/seed.js` — see `SUPER_ADMIN`) with the password stored as a scrypt hash. To change it, update `SUPER_ADMIN` in `seed.js` and re-run `npm run seed`
 
 ## 📡 API Overview
 
@@ -127,8 +127,9 @@ vercel --prod              # production
 | GET | `/api/tournaments/:id/bracket` | Resolved bracket |
 | POST | `/api/auth/signup` | Create account → returns session token |
 | POST | `/api/auth/login` | Sign in → returns session token |
-| POST | `/api/auth/logout` | Invalidate the current session |
+| POST | `/api/auth/admin-login` | Super admin sign-in (username + password) |
 | GET | `/api/auth/me` | Current signed-in user |
+| POST | `/api/auth/logout` | Invalidate the current session |
 | POST | `/api/tournaments/:id/registrations` | Register a team (public) |
 | GET | `/api/tournaments/:id/registrations` | List entrants |
 | POST | `/api/matches/:id/winner` | Advance a match *(admin)* |
@@ -136,7 +137,7 @@ vercel --prod              # production
 | POST / PATCH / DELETE | `/api/announcements[/:id]` | Manage announcements *(admin)* |
 | GET | `/api/stats` | Site-wide stats |
 
-Admin routes require the header `x-admin-key: <passcode>`.
+Admin routes require `Authorization: Bearer <admin-session-token>` (obtained via `POST /api/auth/admin-login`).
 
 ## 🗂 Project Structure
 
@@ -161,5 +162,6 @@ Admin routes require the header `x-admin-key: <passcode>`.
 | Var | Purpose |
 | --- | --- |
 | `DATABASE_URL` | Supabase Postgres connection string (transaction pooler). Omit for local SQLite |
-| `ADMIN_PASSCODE` | Admin panel passcode (default `stallions`) |
 | `PORT` | API port for local dev (default `5000`) |
+
+> **Super admin credentials** are constants in `server/seed.js` (`SUPER_ADMIN.username` / `SUPER_ADMIN.password`) — they are *not* environment variables. Change them there and re-run `npm run seed`.

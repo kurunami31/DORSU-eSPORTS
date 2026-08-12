@@ -47,6 +47,14 @@ export function AuthProvider({ children }) {
     return res.user;
   }, []);
 
+  // Super admin sign-in (username + password → role: admin).
+  const loginAdmin = useCallback(async (data) => {
+    const res = await api('/auth/admin-login', { method: 'POST', body: JSON.stringify(data) });
+    setToken(res.token);
+    setUser(res.user);
+    return res.user;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api('/auth/logout', { method: 'POST' });
@@ -58,7 +66,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, ready, signup, login, logout, refresh }}>
+    <AuthContext.Provider value={{ user, ready, signup, login, loginAdmin, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

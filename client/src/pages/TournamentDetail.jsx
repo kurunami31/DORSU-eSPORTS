@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getTournament, getRegistrations, generateBrackets, getAdminKey } from '../api.js';
+import { getTournament, getRegistrations, generateBrackets } from '../api.js';
+import { useAuth } from '../auth.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import Bracket from '../components/Bracket.jsx';
 import { GameTile } from '../components/GameGlyph.jsx';
@@ -13,7 +14,8 @@ export default function TournamentDetail() {
   const [registrations, setRegistrations] = useState([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [admin] = useState(() => Boolean(getAdminKey()));
+  const { user } = useAuth();
+  const admin = Boolean(user && user.role === 'admin');
 
   const load = useCallback(() => {
     return Promise.all([getTournament(id), getRegistrations(id)])

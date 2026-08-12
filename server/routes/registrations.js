@@ -10,7 +10,7 @@ const PUBLIC_FIELDS = 'id, tournament_id, team_name, captain_name, created_at';
 
 // List registrations for a tournament
 router.get('/tournaments/:tournamentId/registrations', asyncHandler(async (req, res) => {
-  if (isAdmin(req)) {
+  if (await isAdmin(req)) {
     const rows = await db.all(
       'SELECT * FROM registrations WHERE tournament_id = ? ORDER BY created_at ASC',
       [req.params.tournamentId]

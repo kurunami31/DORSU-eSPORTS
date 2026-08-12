@@ -1,6 +1,24 @@
 import { db } from './db.js';
 import { generateBrackets, listMatches, setMatchWinner } from './matchmaking.js';
+import { hashPassword } from './auth.js';
 import { pathToFileURL } from 'node:url';
+
+// Super admin account (role-based — replaces the old shared passcode).
+// Change these before a fresh seed if you want different credentials.
+export const SUPER_ADMIN = {
+  username: 'esportadmin',
+  email: 'esportadmin@dorsu.edu.ph',
+  password: 'dorsuesports2026',
+  name: 'DOrSU eSPORTS Admin',
+};
+
+async function insertSuperAdmin() {
+  await db.run(
+    `INSERT INTO users (name, username, email, password_hash, role)
+     VALUES (?, ?, ?, ?, 'admin')`,
+    [SUPER_ADMIN.name, SUPER_ADMIN.username, SUPER_ADMIN.email, hashPassword(SUPER_ADMIN.password)]
+  );
+}
 
 function dateOffset(days) {
   const d = new Date();
@@ -48,6 +66,9 @@ export async function runSeed() {
     DROP TABLE IF EXISTS tournaments;
   `);
   await db.init();
+
+  // ── Super admin account ─────────────────────────────────────
+  await insertSuperAdmin();
 
   // ── Tournaments ─────────────────────────────────────────────
   const mlbbActive = await insertTournament({

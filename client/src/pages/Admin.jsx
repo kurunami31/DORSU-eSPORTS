@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  api, getAdminKey, setAdminKey, getTournaments, getRegistrations,
+  getTournaments, getRegistrations,
   createTournament, updateTournament, deleteTournament, generateBrackets,
   deleteRegistration, getAnnouncements, createAnnouncement, updateAnnouncement,
   deleteAnnouncement,
 } from '../api.js';
+import { useAuth } from '../auth.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import Icon from '../components/Icon.jsx';
 
@@ -24,29 +25,37 @@ const EMPTY_TOURNAMENT = {
 const EMPTY_ANNOUNCEMENT = { title: '', body: '', category: 'General', pinned: false };
 
 export default function Admin() {
-  const [authed, setAuthed] = useState(() => Boolean(getAdminKey()));
+  const { user, ready, loginAdmin } = useAuth();
+  const isAdmin = user && user.role === 'admin';
 
-  if (!authed) return <Gate onAuth={() => setAuthed(true)} />;
+  if (!ready) {
+    return (
+      <section className="section" style={{ minHeight: '70vh', display: 'grid', placeItems: 'center' }}>
+        <div className="loading">Checking access…</div>
+      </section>
+    );
+  }
+
+  if (!isAdmin) return <Gate onLogin={loginAdmin} />;
   return <Dashboard />;
 }
 
-/* ── Passcode gate ─────────────────────────────────────── */
-function Gate({ onAuth }) {
-  const [key, setKey] = useState('');
+/* ── Super admin gate (username + password) ─────────────── */
+function Gate({ onLogin }) {
+  const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     setError('');
-    setAdminKey(key.trim());
     try {
-      await api('/admin/check');
-      onAuth();
-    } catch {
-      setAdminKey('');
-      setError('Incorrect passcode. Try again.');
+      await onLogin(form);
+    } catch (err) {
+      setError(err.message || 'Incorrect admin credentials. Try again.');
     } finally {
       setBusy(false);
     }
@@ -60,30 +69,43 @@ function Gate({ onAuth }) {
             <div style={{ width: 60, height: 60, margin: '0 auto 12px', borderRadius: 18, display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg, var(--blue-soft), var(--yellow-soft))', border: '1px solid var(--line-strong)', color: 'var(--yellow)' }} aria-hidden="true">
               <Icon name="lock" size={26} />
             </div>
-            <h2 style={{ fontSize: 24 }}>Admin Access</h2>
+            <h2 style={{ fontSize: 24 }}>Super Admin</h2>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 6 }}>
-              Enter the passcode to manage tournaments and announcements.
+              Sign in with the super admin account to manage tournaments and announcements.
             </p>
           </div>
           {error && <div className="form-error" role="alert">{error}</div>}
           <div className="field">
-            <label htmlFor="admin-key">Passcode</label>
+            <label htmlFor="admin-username">Username</label>
             <input
-              id="admin-key"
-              type="password"
+              id="admin-username"
               className="input"
-              placeholder="Default: stallions"
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
+              placeholder="esportadmin"
+              autoComplete="username"
+              value={form.username}
+              onChange={set('username')}
               autoFocus
               required
             />
           </div>
+          <div className="field">
+            <label htmlFor="admin-password">Password</label>
+            <input
+              id="admin-password"
+              type="password"
+              className="input"
+              placeholder="••••••••••••"
+              autoComplete="current-password"
+              value={form.password}
+              onChange={set('password')}
+              required
+            />
+          </div>
           <button className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
-            {busy ? <span className="spin" /> : <Icon name="lockOpen" size={15} />} Unlock
+            {busy ? <span className="spin" /> : <Icon name="lockOpen" size={15} />} Sign In
           </button>
           <p style={{ color: 'var(--muted-2)', fontSize: 12.5, textAlign: 'center', marginTop: 14 }}>
-            Change it by setting the <code>ADMIN_PASSCODE</code> environment variable.
+            Only the super admin account can access this panel.
           </p>
         </form>
       </div>
@@ -94,6 +116,7 @@ function Gate({ onAuth }) {
 /* ── Dashboard ──────────────────────────────────────────── */
 function Dashboard() {
   const [tab, setTab] = useState('tournaments');
+  const { logout } = useAuth();
 
   return (
     <>
@@ -103,14 +126,8 @@ function Dashboard() {
             <span className="eyebrow">Control Room</span>
             <h1>Admin Panel</h1>
           </div>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => {
-              setAdminKey('');
-              window.location.reload();
-            }}
-          >
-            Lock Session
+          <button className="btn btn-ghost btn-sm" onClick={logout}>
+            <Icon name="lock" size={14} /> Lock Session
           </button>
         </div>
       </section>

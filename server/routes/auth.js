@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-const USER_FIELDS = 'id, name, email, created_at';
+const USER_FIELDS = 'id, name, username, email, role, created_at';
 
 // Fixed scrypt output used to equalize login timing for unknown emails.
 const DUMMY_HASH = hashPassword('dummy-constant-password');
@@ -27,7 +27,8 @@ function checkPassword(value) {
   return s;
 }
 
-const toPublicUser = (u) => (u ? { id: u.id, name: u.name, email: u.email, created_at: u.created_at } : null);
+const toPublicUser = (u) =>
+  u ? { id: u.id, name: u.name, username: u.username, email: u.email, role: u.role, created_at: u.created_at } : null;
 
 // Sign up — creates the account and returns a session token.
 router.post('/signup', asyncHandler(async (req, res) => {
@@ -69,6 +70,27 @@ router.post('/login', asyncHandler(async (req, res) => {
 
   if (!valid) {
     throw new ValidationError('Invalid email or password.');
+  }
+
+  const token = await createSession(user.id);
+  res.json({ token, user: toPublicUser(user) });
+}));
+
+// Super admin sign-in — username + password for /admin. Player accounts can
+// never reach this role, and unknown usernames run a dummy scrypt so the
+// response timing never reveals which usernames exist.
+router.post('/admin-login', asyncHandler(async (req, res) => {
+  const username = requiredStr(req.body.username, { name: 'Username', min: 2, max: 60 }).toLowerCase();
+  const password = String(req.body.password ?? '');
+
+  const user = await db.get(
+    "SELECT * FROM users WHERE LOWER(username) = ? AND role = 'admin'",
+    [username]
+  );
+  const valid = verifyPassword(password, user ? user.password_hash : DUMMY_HASH);
+
+  if (!valid) {
+    throw new ValidationError('Invalid admin username or password.');
   }
 
   const token = await createSession(user.id);

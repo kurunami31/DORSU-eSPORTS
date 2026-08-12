@@ -66,11 +66,7 @@ export default function Footer() {
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} DOrSU eSPORTS. All rights reserved.</span>
-          <span>
-            <Link to="/admin" style={{ color: 'inherit', opacity: 0.7 }}>
-              Admin
-            </Link>
-          </span>
+          <span>Forged in the Arena · Davao Oriental State University</span>
         </div>
       </div>
     </footer>

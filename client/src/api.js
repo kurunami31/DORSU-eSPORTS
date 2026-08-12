@@ -1,14 +1,5 @@
 const API_BASE = '/api';
 
-export function getAdminKey() {
-  return sessionStorage.getItem('dorsu_admin_key') || '';
-}
-
-export function setAdminKey(key) {
-  if (key) sessionStorage.setItem('dorsu_admin_key', key);
-  else sessionStorage.removeItem('dorsu_admin_key');
-}
-
 export function getToken() {
   return localStorage.getItem('dorsu_user_token') || '';
 }
@@ -20,8 +11,6 @@ export function setToken(token) {
 
 export async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  const key = getAdminKey();
-  if (key) headers['x-admin-key'] = key;
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 

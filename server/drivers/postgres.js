@@ -70,12 +70,14 @@ const SCHEMA = `
     UNIQUE(tournament_id, round, position)
   );
 
-  -- Player accounts (login / signup)
+  -- Player accounts (login / signup). role: 'player' | 'admin' (super admin).
   CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
+    username TEXT,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'player',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 
@@ -94,6 +96,12 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_unique_name
     ON registrations (tournament_id, LOWER(team_name));
+
+  -- Migration for databases created before the role/username columns existed.
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'player';
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (LOWER(username));
 
   -- ── Lockdown (defense in depth) ───────────────────────────
   -- The app connects as the project owner (postgres.<ref>), which bypasses
