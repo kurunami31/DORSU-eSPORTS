@@ -37,16 +37,32 @@ export function teamSizeLabel(teamSize) {
 export const GAMES = {
   'Mobile Legends: Bang Bang': { icon: 'gamepad', tint: 'blue', image: '/logos/ml-logo.webp' },
   'Call of Duty: Mobile': { icon: 'crosshair', tint: 'green', image: '/logos/codm-logo.png' },
-  Valorant: { icon: 'crosshair', tint: 'red' },
+  Valorant: { icon: 'crosshair', tint: 'red', image: '/logos/valorant-logo.svg' },
   'Tekken 8': { icon: 'flame', tint: 'yellow', image: '/logos/tekken8-logo.svg' },
-  'Dota 2': { icon: 'moon', tint: 'green' },
-  'League of Legends': { icon: 'trophy', tint: 'gold' },
-  'Call of Duty': { icon: 'crosshair', tint: 'red' },
+  'Dota 2': { icon: 'moon', tint: 'green', image: '/logos/dota2-logo.svg' },
+  'League of Legends': { icon: 'trophy', tint: 'gold', image: '/logos/lol-logo.svg' },
+  'Call of Duty': { icon: 'crosshair', tint: 'red', image: '/logos/codm-logo.png' },
   FIFA: { icon: 'medal', tint: 'green' },
 };
 
 export function gameGlyph(game) {
   return GAMES[game] || { icon: 'gamepad', tint: 'blue' };
+}
+
+// Themed banner gradient for games without a logo image. Each tint maps to a
+// dark, brand-flavored gradient — used as the card banner background so every
+// tournament card gets an arena-worthy header, not a bare chip row.
+export const TINT_GRADIENTS = {
+  blue: 'linear-gradient(135deg, #16336e 0%, #0c1530 55%, #0a0f22 100%)',
+  green: 'linear-gradient(135deg, #0f4a33 0%, #0c1530 55%, #0a0f22 100%)',
+  red: 'linear-gradient(135deg, #5c1d2e 0%, #0c1530 55%, #0a0f22 100%)',
+  yellow: 'linear-gradient(135deg, #4d3a0c 0%, #0c1530 55%, #0a0f22 100%)',
+  gold: 'linear-gradient(135deg, #4a3a12 0%, #0c1530 55%, #0a0f22 100%)',
+};
+
+export function gameBannerGradient(game) {
+  const g = gameGlyph(game);
+  return TINT_GRADIENTS[g.tint] || TINT_GRADIENTS.blue;
 }
 
 export const FACEBOOK_URL = 'https://www.facebook.com/dorsuesportscommunity';

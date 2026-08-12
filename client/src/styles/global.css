@@ -1152,13 +1152,6 @@ select.input option { background: var(--bg-2); }
 }
 .tournament-card:hover::before { opacity: 1; }
 
-.tc-top {
-  padding: 22px 22px 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
 .tc-game {
   display: inline-flex;
   align-items: center;
@@ -1187,6 +1180,15 @@ select.input option { background: var(--bg-2); }
   background-position: center;
   background-color: var(--bg-2);
   border-bottom: 1px solid var(--line);
+}
+/* Themed gradient banner for games without a logo image */
+.tc-banner.tc-banner-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(420px 160px at 20% -30%, rgba(91, 150, 255, 0.28), transparent 70%),
+    radial-gradient(360px 140px at 85% 120%, rgba(255, 198, 26, 0.14), transparent 70%);
+  pointer-events: none;
 }
 .tc-banner::before {
   content: '';
@@ -1222,6 +1224,13 @@ select.input option { background: var(--bg-2); }
   width: auto;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
   border-radius: 4px;
+}
+/* Gradient banner uses the icon glyph — same visual weight as the logos */
+.tc-banner.tc-banner-gradient .tc-banner-game .icon {
+  width: 26px;
+  height: 26px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
+  color: var(--yellow-bright);
 }
 
 /* Game tile on detail pages (image or icon) */
@@ -1665,7 +1674,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .tournament-grid { gap: 18px; }
   .tc-banner { height: 104px; }
   .tc-banner .tc-banner-game { font-size: 12.5px; }
-  .tc-top, .tc-body { padding-left: 18px; padding-right: 18px; }
+  .tc-body { padding-left: 18px; padding-right: 18px; }
   .tc-foot { padding: 14px 18px 18px; flex-wrap: wrap; }
   .tc-foot .btn { flex-shrink: 0; }
   .progress { margin: 16px 18px 0; }

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge.jsx';
 import Icon from './Icon.jsx';
-import { gameGlyph, formatDate, teamSizeLabel } from '../utils.js';
+import { gameBannerGradient, gameGlyph, formatDate, teamSizeLabel } from '../utils.js';
 
 export default function TournamentCard({ tournament }) {
   const g = gameGlyph(tournament.game);
@@ -24,12 +24,17 @@ export default function TournamentCard({ tournament }) {
           </span>
         </div>
       ) : (
-        <div className="tc-top">
-          <span className="tc-game">
-            <Icon name={g.icon} size={15} />
+        <div
+          className="tc-banner tc-banner-gradient"
+          style={{ backgroundImage: gameBannerGradient(tournament.game) }}
+          role="img"
+          aria-label={`${tournament.game} banner`}
+        >
+          <StatusBadge status={tournament.status} />
+          <span className="tc-banner-game">
+            <Icon name={g.icon} size={18} />
             {tournament.game}
           </span>
-          <StatusBadge status={tournament.status} />
         </div>
       )}
 
