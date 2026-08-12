@@ -1,21 +1,62 @@
-import { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import Logo from './Logo.jsx';
 import Icon from './Icon.jsx';
 import { useAuth } from '../auth.jsx';
 
-const LINKS = [
+// The full wordmark (logo + subtitle) stays visible at every size, so the bar
+// only keeps the core links and tucks the rest into a "More" dropdown (which
+// flattens into the burger drawer on smaller screens).
+const VISIBLE_LINKS = [
   { to: '/', label: 'Home' },
-  { to: '/tournaments', label: 'Tournaments' },
-  { to: '/games', label: 'Games' },
-  { to: '/leaderboard', label: 'Leaderboard' },
   { to: '/announcements', label: 'Announcements' },
   { to: '/about', label: 'About' },
 ];
+const MORE_LINKS = [
+  { to: '/tournaments', label: 'Tournaments' },
+  { to: '/games', label: 'Games' },
+  { to: '/leaderboard', label: 'Leaderboard' },
+];
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); // mobile drawer
+  const [moreOpen, setMoreOpen] = useState(false); // desktop dropdown
   const { user, ready } = useAuth();
+  const { pathname } = useLocation();
+  const moreRef = useRef(null);
+
+  const isStaff = ready && user && (user.role === 'admin' || user.role === 'moderator');
+
+  // Drop the More dropdown the moment the route changes.
+  useEffect(() => setMoreOpen(false), [pathname]);
+
+  // Close the More dropdown on any click outside it.
+  useEffect(() => {
+    if (!moreOpen) return undefined;
+    const onDown = (e) => {
+      if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setMoreOpen(false);
+        // Keyboard users: hand focus back to the trigger.
+        moreRef.current?.querySelector('.nav-more-btn')?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [moreOpen]);
+
+  const closeAll = () => {
+    setOpen(false);
+    setMoreOpen(false);
+  };
+
+  const inMore = MORE_LINKS.some((l) => pathname.startsWith(l.to)) || (isStaff && pathname.startsWith('/admin'));
 
   return (
     <header className="navbar">
@@ -23,7 +64,7 @@ export default function Navbar() {
         <Logo />
         <nav aria-label="Primary">
           <ul className={`nav-links ${open ? 'open' : ''}`}>
-            {LINKS.map((l) => (
+            {VISIBLE_LINKS.map((l) => (
               <li key={l.to}>
                 <NavLink
                   to={l.to}
@@ -35,17 +76,44 @@ export default function Navbar() {
                 </NavLink>
               </li>
             ))}
-            {ready && user && (user.role === 'admin' || user.role === 'moderator') && (
-              <li className="nav-link-staff">
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) => (isActive ? 'active' : '')}
-                  onClick={() => setOpen(false)}
-                >
-                  <Icon name="shield" size={13} /> Panel
-                </NavLink>
-              </li>
-            )}
+
+            <li className="nav-more" ref={moreRef}>
+              <button
+                type="button"
+                className={`nav-more-btn ${moreOpen ? 'open' : ''} ${inMore ? 'active' : ''}`}
+                aria-expanded={moreOpen}
+                aria-haspopup="true"
+                onClick={() => setMoreOpen((v) => !v)}
+              >
+                More <Icon name="chevron" size={14} />
+              </button>
+              <ul className={`nav-more-menu ${moreOpen ? 'open' : ''}`}>
+                <li className="nav-more-label" aria-hidden="true">Browse the arena</li>
+                {MORE_LINKS.map((l) => (
+                  <li key={l.to}>
+                    <NavLink
+                      to={l.to}
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={closeAll}
+                    >
+                      {l.label}
+                    </NavLink>
+                  </li>
+                ))}
+                {isStaff && (
+                  <li>
+                    <NavLink
+                      to="/admin"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={closeAll}
+                    >
+                      <Icon name="shield" size={14} /> Panel
+                    </NavLink>
+                  </li>
+                )}
+              </ul>
+            </li>
+
             {ready && (
               <li className={user ? 'nav-link-user' : 'nav-link-user nav-link-mobile-only'}>
                 <NavLink
