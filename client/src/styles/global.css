@@ -764,6 +764,12 @@ select.input option { background: var(--bg-2); }
   font-size: 14.5px;
   font-weight: 600;
   letter-spacing: 0.05em;
+  /* Exact text-height box: the display font's tall metrics made the link
+     boxes stretch toward the bar's top edge, so links sat visually high. */
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 9px 15px;
   border-radius: 9px;
   position: relative;
