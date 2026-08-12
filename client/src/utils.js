@@ -38,7 +38,7 @@ export const GAMES = {
   'Mobile Legends: Bang Bang': { icon: 'gamepad', tint: 'blue', image: '/logos/ml-logo.webp' },
   'Call of Duty: Mobile': { icon: 'crosshair', tint: 'green', image: '/logos/codm-logo.png' },
   Valorant: { icon: 'crosshair', tint: 'red' },
-  'Tekken 8': { icon: 'flame', tint: 'yellow' },
+  'Tekken 8': { icon: 'flame', tint: 'yellow', image: '/logos/tekken8-logo.svg' },
   'Dota 2': { icon: 'moon', tint: 'green' },
   'League of Legends': { icon: 'trophy', tint: 'gold' },
   'Call of Duty': { icon: 'crosshair', tint: 'red' },
