@@ -1036,6 +1036,21 @@ select.input option { background: var(--bg-2); }
   font-size: 13px;
 }
 
+/* Developer credit line beneath the copyright row */
+.footer-credit {
+  margin-top: 14px;
+  color: var(--muted-2);
+  font-size: 12.5px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.footer-credit a {
+  color: var(--blue-bright);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.footer-credit a:hover { color: var(--yellow); }
+
 @media (max-width: 800px) {
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }

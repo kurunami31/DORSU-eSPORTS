@@ -76,6 +76,10 @@ export function gameSlug(game) {
 
 export const FACEBOOK_URL = 'https://www.facebook.com/dorsuesportscommunity';
 
+// Developer credit — the site was built by Christopher Lyod B. Mercado (see
+// the footer). Links to his portfolio.
+export const DEVELOPER_PORTFOLIO_URL = 'https://kurunami31.github.io/Portfolio/';
+
 /**
  * Read a picked image file and return a compact JPEG data URL.
  * - `maxDim`: longest edge after resize (default 256).

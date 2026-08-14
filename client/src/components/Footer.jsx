@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import Logo from './Logo.jsx';
 import Icon from './Icon.jsx';
-import { FACEBOOK_URL } from '../utils.js';
+import { FACEBOOK_URL, DEVELOPER_PORTFOLIO_URL } from '../utils.js';
 
 export default function Footer() {
   return (
@@ -69,6 +69,13 @@ export default function Footer() {
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} DOrSU eSPORTS. All rights reserved.</span>
           <span>Forged in the Arena · Davao Oriental State University</span>
+        </div>
+        <div className="footer-credit">
+          Developed by{' '}
+          <a href={DEVELOPER_PORTFOLIO_URL} target="_blank" rel="noopener noreferrer">
+            Christopher Lyod B. Mercado
+          </a>
+          {' '}· 3rd Year BSIT · Davao Oriental State University
         </div>
       </div>
     </footer>
