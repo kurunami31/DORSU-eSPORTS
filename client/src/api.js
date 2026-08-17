@@ -80,6 +80,11 @@ export const setWinner = (matchId, winnerId) =>
 // Super-admin only (see /admin panel)
 export const getAdminStats = () => api('/admin/stats');
 export const getAdminUsers = (q) => api(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+export const getAdminUser = (id) => api(`/admin/users/${id}`);
+export const createAdminUser = (data) =>
+  api('/admin/users', { method: 'POST', body: JSON.stringify(data) });
+export const updateAdminUser = (id, data) =>
+  api(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 export const deleteAdminUser = (id) => api(`/admin/users/${id}`, { method: 'DELETE' });
 export const setUserRole = (id, role, username) =>
   api(`/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role, username }) });

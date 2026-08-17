@@ -11,7 +11,7 @@ The official competitive gaming website for **Davao Oriental State University**'
 - **Announcements** — categorized feed (Tournament / General / Community / Patch) with pinned posts
 - **Player accounts** — sign up / sign in at **/login**; scrypt-hashed passwords, 30-day bearer sessions, and one-tap prefilled team registration
 - **AI assistant** — a floating **DOrSU eSPORTS Assist** chat widget (bottom-right) answers visitors about open tournaments, registration, and the org — powered by **Groq** (Llama 3.3 70B), grounded in live site data, rate-limited, and safe for the public (no staff/internal details)
-- **Admin panel** — super-admin-protected dashboard (username + password) to create/edit tournaments, generate brackets, advance matches, manage registrations, publish announcements, manage player accounts, assign moderator roles, and toggle maintenance
+- **Admin panel** — staff-protected dashboard (username + password) to create/edit tournaments, generate brackets, advance matches, manage registrations, publish announcements, manage accounts with full CRUD (players, moderators, and super admins), and toggle maintenance
 - **Live bracket UI** — SVG-connected round columns, winner highlighting, and click-to-advance in admin mode
 - Dark esports theme with DOrSU blue/yellow and a woven **Dagmay** textile motif
 
@@ -70,7 +70,7 @@ The schema auto-migrates on boot (`CREATE TABLE IF NOT EXISTS`), so seeding is t
 DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true" npm run seed
 ```
 
-This drops and recreates all tables, then loads 5 tournaments, 38 teams, live brackets, and 5 announcements. Re-run it anytime to reset to pristine demo data.
+This drops and recreates all tables, then creates only the super admin account — the database starts empty of demo content. Re-run it anytime to reset to a clean slate.
 
 ## ▲ Vercel Deployment
 
@@ -118,10 +118,16 @@ vercel --prod              # production
 - Visit **/admin** on the deployed site (there is no public link to it; signed-in staff also see a **Panel** link in the navbar)
 - Sign in with a **staff account**: username + password (super admins and moderators both use this form)
 - **Super admin** (seed): username `esportadmin` · password `dorsuesports2026`
-- **Moderators** are promoted by the super admin from existing player accounts — **Players tab → Role** dropdown offers only **Player / Moderator** (you can also set their sign-in username there). The **Super Admin role is reserved for the built-in `esportadmin` account** and can never be granted to another account — not from the panel and not via the API. Their access:
-  - ✅ Site overview stats, publish/edit/delete announcements, review team lists + remove rule-breaking registrations, full team-list detail view
-  - ❌ No tournament create/edit/delete, no bracket generation, no account management, no role changes, no maintenance toggle
-- The super admin account is created by the seed script (`server/seed.js` — see `SUPER_ADMIN`) with the password stored as a scrypt hash. To change it, update `SUPER_ADMIN` in `seed.js` and re-run `npm run seed`
+- **Accounts tab** (super admins) is full CRUD for every account — players, moderators, and other super admins:
+  - **Create** — `New Account` button: name, email, role (**Player / Moderator / Super Admin**), a sign-in username (required for staff roles), and password
+  - **Read** — searchable list with role, email, team count, and join date (plus `GET /api/admin/users/:id` for one account)
+  - **Update** — `Edit` on any row to change name, email, username, role, or reset the password (leave blank to keep it)
+  - **Delete** — `Delete` on any row (super admins can remove other super admins too)
+  - Safety guards: you can never change your own role or delete your own account, and the system always keeps at least one super admin (the last one cannot be demoted or deleted)
+- Staff access:
+  - **Moderator** — ✅ Site overview stats, publish/edit/delete announcements, review team lists + remove rule-breaking registrations, full team-list detail view — ❌ No tournament create/edit/delete, no bracket generation, no account management, no role changes, no maintenance toggle
+  - **Super admin** — everything above, plus tournament create/edit/delete, bracket generation, player accounts, roles, and maintenance toggle
+- The initial super admin account is created by the seed script (`server/seed.js` — see `SUPER_ADMIN`) with the password stored as a scrypt hash. To change it, update `SUPER_ADMIN` in `seed.js` and re-run `npm run seed` — or change the password live from the panel (Accounts tab → Edit)
 
 ## 📡 API Overview
 
@@ -148,9 +154,12 @@ vercel --prod              # production
 | POST | `/api/chat` | AI assistant reply (Groq, requires `GROQ_API_KEY`) |
 | GET | `/api/health` | Liveness probe (+ current `maintenance` flag) |
 | GET | `/api/admin/stats` | Rich dashboard stats (game/status breakdowns, recent sign-ups, deadlines) *(staff)* |
-| GET | `/api/admin/users` | List player accounts (+ `?q=` search) *(admin)* |
-| PATCH | `/api/admin/users/:id/role` | Set a role: `player` / `moderator` (+ optional `username` for moderators). The `admin` role is reserved for the super admin account *(admin)* |
-| DELETE | `/api/admin/users/:id` | Delete a player account (staff accounts protected) *(admin)* |
+| GET | `/api/admin/users` | List all accounts (+ `?q=` search) *(admin)* |
+| POST | `/api/admin/users` | Create an account — `player` / `moderator` / `admin` *(admin)* |
+| GET | `/api/admin/users/:id` | Single account detail *(admin)* |
+| PATCH | `/api/admin/users/:id` | Update name/email/username/role/password *(admin)* |
+| PATCH | `/api/admin/users/:id/role` | Set a role: `player` / `moderator` / `admin` (+ optional `username` for staff) *(admin)* |
+| DELETE | `/api/admin/users/:id` | Delete an account (self and the last remaining admin are protected) *(admin)* |
 | PUT | `/api/admin/maintenance` | Toggle maintenance mode + set message live from the panel *(admin)* |
 
 Staff routes require `Authorization: Bearer <staff-session-token>` (obtained via `POST /api/auth/admin-login`).

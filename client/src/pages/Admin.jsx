@@ -5,7 +5,7 @@ import {
   createTournament, updateTournament, deleteTournament, generateBrackets,
   deleteRegistration, getAnnouncements, createAnnouncement, updateAnnouncement,
   deleteAnnouncement,
-  getAdminStats, getAdminUsers, deleteAdminUser, setUserRole, setMaintenance, getMaintenance,
+  getAdminStats, getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser, setUserRole, setMaintenance, getMaintenance,
 } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
@@ -171,7 +171,7 @@ function Dashboard() {
                 className={`filter-tab ${tab === 'players' ? 'active' : ''}`}
                 onClick={() => setTab('players')}
               >
-                <Icon name="users" size={14} /> Players
+                <Icon name="users" size={14} /> Accounts
               </button>
             )}
           </div>
@@ -419,11 +419,12 @@ function MaintenanceControl() {
   );
 }
 
-// The admin role is reserved for the built-in super admin account and can
-// never be granted from the panel — the dropdown manages players/moderators.
+// Roles assignable from the panel — any account can be created or promoted
+// to moderator or super admin by an existing super admin.
 const ROLE_OPTIONS = [
   { value: 'player', label: 'Player' },
   { value: 'moderator', label: 'Moderator' },
+  { value: 'admin', label: 'Super Admin' },
 ];
 
 /* ── Inline role editor (super admin only) ──────────────── */
@@ -433,16 +434,6 @@ function RoleEditor({ account, me, onChanged }) {
   const [username, setUsername] = useState(account.username || '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-
-  // Existing super admin accounts are fixed — no dropdown, no accidental demotion.
-  if (account.role === 'admin') {
-    return (
-      <div className="role-editor">
-        <span className="role-chip admin">Super Admin</span>
-        {isMe && <span className="u-email">You</span>}
-      </div>
-    );
-  }
 
   const save = async (nextRole) => {
     setRole(nextRole);
@@ -496,7 +487,104 @@ function RoleEditor({ account, me, onChanged }) {
   );
 }
 
-/* ── Players panel (super-admin only) ───────────────────── */
+const EMPTY_ACCOUNT = {
+  name: '', email: '', username: '', password: '', role: 'moderator',
+};
+
+/* ── Account create/edit form (super admin only) ────────── */
+function AccountForm({ editing, onDone, onError }) {
+  const [form, setForm] = useState(
+    editing
+      ? {
+          name: editing.name,
+          email: editing.email,
+          username: editing.username || '',
+          password: '',
+          role: editing.role,
+        }
+      : EMPTY_ACCOUNT
+  );
+  const [busy, setBusy] = useState(false);
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const isStaffRole = form.role !== 'player';
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const payload = { ...form };
+      if (!isStaffRole) payload.username = undefined;
+      if (editing && !payload.password) delete payload.password;
+      if (editing) await updateAdminUser(editing.id, payload);
+      else await createAdminUser(payload);
+      onDone();
+    } catch (err) {
+      onError(err.message || 'Failed to save account.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="card" style={{ padding: 28, marginBottom: 28 }} onSubmit={submit}>
+      <h3 style={{ marginBottom: 18 }}>{editing ? `Edit: ${editing.name}` : 'New Account'}</h3>
+      <div className="form-grid">
+        <div className="field">
+          <label>Full Name</label>
+          <input className="input" value={form.name} onChange={set('name')} placeholder="e.g. Jane Admin" required />
+        </div>
+        <div className="field">
+          <label>Email</label>
+          <input className="input" type="email" value={form.email} onChange={set('email')} placeholder="name@dorsu.edu.ph" required />
+        </div>
+        <div className="field">
+          <label>Role</label>
+          <select className="input" value={form.role} onChange={set('role')}>
+            {ROLE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        {isStaffRole && (
+          <div className="field">
+            <label>Sign-in Username</label>
+            <input
+              className="input"
+              value={form.username}
+              onChange={set('username')}
+              placeholder="e.g. jane.admin"
+              minLength={2}
+              maxLength={60}
+              required
+            />
+          </div>
+        )}
+        <div className="field">
+          <label>Password</label>
+          <input
+            className="input"
+            type="password"
+            value={form.password}
+            onChange={set('password')}
+            minLength={8}
+            maxLength={128}
+            placeholder={editing ? 'Leave blank to keep current' : '8+ chars, letters and numbers'}
+            required={!editing}
+          />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button className="btn btn-primary" disabled={busy}>
+          {busy ? <span className="spin" /> : null} {editing ? 'Save Changes' : 'Create Account'}
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={onDone}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+/* ── Accounts panel (super-admin only) ───────────────────── */
 function PlayersPanel() {
   const [users, setUsers] = useState([]);
   const [q, setQ] = useState('');
@@ -504,6 +592,8 @@ function PlayersPanel() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState('success');
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
   const { user: me } = useAuth();
 
   const load = (search) => {
@@ -524,13 +614,36 @@ function PlayersPanel() {
     load(q);
   };
 
+  const startCreate = () => {
+    setEditing(null);
+    setShowForm(true);
+  };
+
+  const startEdit = (u) => {
+    setEditing(u);
+    setShowForm(true);
+  };
+
+  const handleDone = () => {
+    setMsg(editing ? 'Account updated.' : 'Account created.');
+    setMsgType('success');
+    setShowForm(false);
+    load(query);
+  };
+
+  const handleError = (message) => {
+    setMsg(message);
+    setMsgType('error');
+  };
+
   const remove = async (u) => {
-    if (u.role === 'admin') return;
-    if (!window.confirm(`Delete the account for "${u.name}" (${u.email})? Their session is ended immediately.`)) return;
+    if (u.id === me?.id) return;
+    const label = u.role === 'admin' ? 'super admin' : u.role === 'moderator' ? 'moderator' : 'player';
+    if (!window.confirm(`Delete the ${label} account for "${u.name}" (${u.email})? Their session is ended immediately.`)) return;
     setMsg('');
     try {
       await deleteAdminUser(u.id);
-      setMsg('Player account deleted.');
+      setMsg('Account deleted.');
       setMsgType('success');
       load(query);
     } catch (err) {
@@ -543,27 +656,34 @@ function PlayersPanel() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
-          <h2 style={{ fontSize: 22 }}>Player Accounts</h2>
+          <h2 style={{ fontSize: 22 }}>Accounts</h2>
           <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
-            Every signed-up account. Super admins are protected from deletion.
+            Every account — players, moderators, and super admins. You can create, edit, or delete any of them.
           </p>
         </div>
-        <form onSubmit={search} style={{ display: 'flex', gap: 10 }}>
-          <input
-            className="input"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name, email, username…"
-            style={{ width: 240 }}
-            aria-label="Search players"
-          />
-          <button className="btn btn-blue btn-sm" type="submit">
-            <Icon name="crosshair" size={14} /> Search
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <form onSubmit={search} style={{ display: 'flex', gap: 10 }}>
+            <input
+              className="input"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search name, email, username…"
+              style={{ width: 220 }}
+              aria-label="Search accounts"
+            />
+            <button className="btn btn-blue btn-sm" type="submit">
+              <Icon name="crosshair" size={14} /> Search
+            </button>
+          </form>
+          <button className="btn btn-primary btn-sm" onClick={startCreate}>
+            <Icon name="plus" size={15} /> New Account
           </button>
-        </form>
+        </div>
       </div>
 
       {msg && <div className={msgType === 'error' ? 'form-error' : 'form-success'}>{msg}</div>}
+
+      {showForm && <AccountForm editing={editing} onDone={handleDone} onError={handleError} />}
 
       {busy ? (
         <div className="loading" style={{ padding: 40 }}>Loading accounts…</div>
@@ -574,7 +694,7 @@ function PlayersPanel() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Player</th>
+                <th>Account</th>
                 <th>Email</th>
                 <th>Role</th>
                 <th>Teams</th>
@@ -595,15 +715,18 @@ function PlayersPanel() {
                   </td>
                   <td style={{ color: 'var(--muted)' }}>{u.registrations}</td>
                   <td className="u-email">{formatDate(u.created_at)}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {u.role === 'admin' ? (
-                      <span style={{ color: 'var(--muted-2)', fontSize: 12.5 }}>
-                        {u.id === me?.id ? 'You' : 'Protected'}
-                      </span>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {u.id === me?.id ? (
+                      <span style={{ color: 'var(--muted-2)', fontSize: 12.5 }}>You</span>
                     ) : (
-                      <button className="btn btn-danger btn-sm" onClick={() => remove(u)}>
-                        <Icon name="trash" size={13} /> Delete
-                      </button>
+                      <>
+                        <button className="btn btn-ghost btn-sm" onClick={() => startEdit(u)}>
+                          <Icon name="pencil" size={13} /> Edit
+                        </button>{' '}
+                        <button className="btn btn-danger btn-sm" onClick={() => remove(u)}>
+                          <Icon name="trash" size={13} /> Delete
+                        </button>
+                      </>
                     )}
                   </td>
                 </tr>

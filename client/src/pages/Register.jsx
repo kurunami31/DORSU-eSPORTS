@@ -183,7 +183,7 @@ export default function Register() {
               <label htmlFor="reg-tournament">Tournament</label>
               <select
                 id="reg-tournament"
-                className="input"
+                className="role-select"
                 value={selected}
                 onChange={(e) => setSelected(Number(e.target.value))}
                 required

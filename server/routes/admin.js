@@ -1,13 +1,61 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAdmin, requireStaff, asyncHandler } from '../middleware.js';
-import { ValidationError, optionalStr } from '../validate.js';
+import { ValidationError, requiredStr, optionalStr, validEmail } from '../validate.js';
+import { hashPassword } from '../auth.js';
 
 const router = Router();
 
-// The admin role belongs to the built-in super admin account only — it can
-// never be granted to another account through this endpoint.
-const ROLES = ['player', 'moderator'];
+// Roles that can be assigned from the panel. The super admin (admin) role is
+// no longer locked to a single built-in account — staff accounts can be
+// created, edited, and removed by any super admin (with safety guards).
+const ROLES = ['player', 'moderator', 'admin'];
+
+const USER_FIELDS =
+  'id, name, username, email, role, bio, contact, avatar, created_at';
+
+// Password policy shared with signup: 8–128 chars with a letter and a digit.
+function checkPassword(value) {
+  const s = requiredStr(value, { name: 'Password', min: 8, max: 128 });
+  if (!/[A-Za-z]/.test(s) || !/\d/.test(s)) {
+    throw new ValidationError('Password must contain at least one letter and one number.');
+  }
+  return s;
+}
+
+// Staff roles sign in at /admin with a username, so one is required.
+function requireUsernameForRole(role, username) {
+  if (role === 'player') return null;
+  return optionalStr(username, { name: 'Username', min: 2, max: 60 }) || null;
+}
+
+async function assertUsernameFree(username, excludeId) {
+  if (!username) return;
+  const taken = await db.get(
+    'SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?',
+    [username, excludeId]
+  );
+  if (taken) throw new ValidationError('That username is already taken.');
+}
+
+async function assertEmailFree(email, excludeId) {
+  const taken = await db.get(
+    'SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ?',
+    [email, excludeId]
+  );
+  if (taken) throw new ValidationError('An account with that email already exists.');
+}
+
+// The system must always keep at least one super admin.
+async function assertNotLastAdmin(id, nextRole) {
+  if (nextRole === 'admin') return;
+  const target = await db.get('SELECT role FROM users WHERE id = ?', [id]);
+  if (!target || target.role !== 'admin') return;
+  const admins = await db.get("SELECT COUNT(*) AS n FROM users WHERE role = 'admin'");
+  if (admins.n <= 1) {
+    throw new ValidationError('Cannot demote the last super admin account — promote another account first.');
+  }
+}
 
 // ── Rich statistics (staff: super admin + moderator) ───────
 router.get('/stats', requireStaff, asyncHandler(async (req, res) => {
@@ -103,10 +151,114 @@ router.get('/users', asyncHandler(async (req, res) => {
   res.json(rows);
 }));
 
+// ── Create an account (player, moderator, or super admin) ──
+// Super admins can provision any role from the panel — including additional
+// admins and moderators — so staff accounts no longer have to be born as
+// players first.
+router.post('/users', asyncHandler(async (req, res) => {
+  const name = requiredStr(req.body.name, { name: 'Name', min: 2, max: 60 });
+  const email = validEmail(req.body.email);
+  const password = checkPassword(req.body.password);
+  const role = String(req.body.role || '').trim().toLowerCase();
+  if (!ROLES.includes(role)) {
+    throw new ValidationError('Role must be player, moderator, or admin.');
+  }
+  const username = requireUsernameForRole(role, req.body.username);
+
+  await assertEmailFree(email, 0);
+  await assertUsernameFree(username, 0);
+
+  let userId;
+  try {
+    const r = await db.run(
+      'INSERT INTO users (name, username, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
+      [name, username, email, hashPassword(password), role]
+    );
+    userId = Number(r.lastInsertRowid);
+  } catch (err) {
+    if (err.message && /unique|duplicate/i.test(err.message)) {
+      throw new ValidationError('An account with that email or username already exists.');
+    }
+    throw err;
+  }
+
+  const user = await db.get(`SELECT ${USER_FIELDS} FROM users WHERE id = ?`, [userId]);
+  res.status(201).json(user);
+}));
+
+// ── Single account detail (super admin only) ────────────────
+router.get('/users/:id', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) throw new ValidationError('Invalid user id.');
+
+  const user = await db.get(
+    `SELECT u.id, u.name, u.username, u.email, u.role, u.bio, u.contact, u.avatar, u.created_at,
+      (SELECT COUNT(*) FROM registrations r
+        WHERE r.email = u.email AND r.status = 'confirmed') AS registrations
+     FROM users u WHERE u.id = ?`,
+    [id]
+  );
+  if (!user) return res.status(404).json({ error: 'Account not found.' });
+  res.json(user);
+}));
+
+// ── Update an account (super admin only) ───────────────────
+// Edits name, email, username, role, and/or password. A super admin can
+// never change their own role or demote/delete the last remaining admin.
+router.patch('/users/:id', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) throw new ValidationError('Invalid user id.');
+
+  const target = await db.get('SELECT * FROM users WHERE id = ?', [id]);
+  if (!target) return res.status(404).json({ error: 'Account not found.' });
+
+  const isSelf = id === req.user.id;
+  let role = target.role;
+  if (req.body.role !== undefined) {
+    if (isSelf && String(req.body.role).trim().toLowerCase() !== 'admin') {
+      return res.status(400).json({ error: 'You cannot change your own role.' });
+    }
+    role = String(req.body.role).trim().toLowerCase();
+    if (!ROLES.includes(role)) {
+      throw new ValidationError('Role must be player, moderator, or admin.');
+    }
+  }
+
+  await assertNotLastAdmin(id, role);
+
+  const name = req.body.name !== undefined
+    ? requiredStr(req.body.name, { name: 'Name', min: 2, max: 60 })
+    : target.name;
+  const email = req.body.email !== undefined ? validEmail(req.body.email) : target.email;
+  const username = req.body.username !== undefined
+    ? requireUsernameForRole(role, req.body.username)
+    : target.username;
+
+  if (String(email).toLowerCase() !== String(target.email || '').toLowerCase()) {
+    await assertEmailFree(email, id);
+  }
+  if (String(username || '').toLowerCase() !== String(target.username || '').toLowerCase()) {
+    await assertUsernameFree(username, id);
+  }
+
+  let passwordHash = target.password_hash;
+  if (req.body.password !== undefined && req.body.password !== '') {
+    passwordHash = hashPassword(checkPassword(req.body.password));
+  }
+
+  await db.run(
+    'UPDATE users SET name = ?, username = ?, email = ?, role = ?, password_hash = ? WHERE id = ?',
+    [name, username, email, role, passwordHash, id]
+  );
+
+  const user = await db.get(`SELECT ${USER_FIELDS} FROM users WHERE id = ?`, [id]);
+  res.json(user);
+}));
+
 // ── Change an account's role (super admin only) ─────────────
-// A player can be promoted to moderator (or another admin) and any staff
-// member can be demoted. Your own role can never be changed from the panel —
-// that guard keeps an admin from accidentally locking themselves out.
+// Kept for backwards compatibility with the panel's inline role editor.
+// Your own role can never be changed from the panel — that guard keeps an
+// admin from accidentally locking themselves out.
 router.patch('/users/:id/role', asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) throw new ValidationError('Invalid user id.');
@@ -117,38 +269,35 @@ router.patch('/users/:id/role', asyncHandler(async (req, res) => {
 
   const role = String(req.body.role || '').trim().toLowerCase();
   if (!ROLES.includes(role)) {
-    throw new ValidationError('Role must be player or moderator. The admin role is reserved for the super admin account.');
+    throw new ValidationError('Role must be player, moderator, or admin.');
   }
+
+  await assertNotLastAdmin(id, role);
 
   const target = await db.get('SELECT * FROM users WHERE id = ?', [id]);
   if (!target) return res.status(404).json({ error: 'Account not found.' });
 
-  // Staff accounts can sign in at /admin with a username. Collect one when
-  // promoting (or keep the existing one) so a fresh moderator isn't left
+  // Staff accounts sign in at /admin with a username. Collect one when
+  // promoting (or keep the existing one) so a fresh staff member isn't left
   // without a way into the panel.
   let username = target.username;
   if (role !== 'player' && req.body.username !== undefined) {
-    username = optionalStr(req.body.username, { name: 'Username', min: 2, max: 60 }) || null;
+    username = requireUsernameForRole(role, req.body.username);
   }
-
-  if (username && String(username).toLowerCase() !== String(target.username || '').toLowerCase()) {
-    const taken = await db.get(
-      'SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?',
-      [username, id]
-    );
-    if (taken) throw new ValidationError('That username is already taken.');
-  }
+  await assertUsernameFree(username, id);
 
   await db.run('UPDATE users SET role = ?, username = ? WHERE id = ?', [role, username, id]);
 
   const user = await db.get(
-    'SELECT id, name, username, email, role, bio, contact, avatar, created_at FROM users WHERE id = ?',
+    `SELECT ${USER_FIELDS} FROM users WHERE id = ?`,
     [id]
   );
   res.json(user);
 }));
 
-// ── Delete a player account (super admins are protected) ───
+// ── Delete an account (super admins can be removed too) ────
+// Guards: you can never delete yourself, and the last remaining super admin
+// can never be deleted.
 router.delete('/users/:id', asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) throw new ValidationError('Invalid user id.');
@@ -157,9 +306,11 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'You cannot delete your own account.' });
   }
 
-  const result = await db.run("DELETE FROM users WHERE id = ? AND role != 'admin'", [id]);
+  await assertNotLastAdmin(id, 'player');
+
+  const result = await db.run('DELETE FROM users WHERE id = ?', [id]);
   if (result.changes === 0) {
-    return res.status(404).json({ error: 'Player account not found.' });
+    return res.status(404).json({ error: 'Account not found.' });
   }
   res.json({ ok: true });
 }));
