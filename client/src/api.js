@@ -25,6 +25,13 @@ export async function api(path, options = {}) {
   }
 
   if (!res.ok) {
+    // A dead/expired session leaves the UI half-signed-in (e.g. the admin
+    // panel keeps rendering but staff actions vanish). Clear the token and
+    // tell the auth context so the app locks itself immediately.
+    if (res.status === 401) {
+      setToken('');
+      window.dispatchEvent(new Event('dorsu:auth-expired'));
+    }
     const err = new Error((data && data.error) || `Request failed (${res.status})`);
     err.status = res.status;
     throw err;

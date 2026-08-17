@@ -2074,6 +2074,80 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .role-username-row { display: flex; gap: 6px; align-items: center; }
 .role-username-row .input { padding: 8px 11px; font-size: 14px; min-width: 0; }
 
+/* Custom dropdown — rounded trigger with a rounded option list
+   (native <select> option panels are OS-rendered and cannot be styled) */
+.select-box { position: relative; }
+.select-box-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.select-box-trigger:hover:not(:disabled) { border-color: var(--blue-bright); }
+.select-box-trigger:focus-visible,
+.select-box.open .select-box-trigger {
+  outline: none;
+  border-color: var(--blue-bright);
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}
+.select-box-trigger:disabled { opacity: 0.5; cursor: not-allowed; }
+.select-box-chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.18s ease;
+}
+.select-box.open .select-box-chevron { transform: rotate(180deg); }
+.select-box-pop {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13.5px;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+.select-option:hover { background: var(--blue-soft); }
+.select-option.selected { background: var(--blue-soft); color: var(--blue-bright); font-weight: 600; }
+.select-option-muted { color: var(--muted-2); font-size: 12.5px; }
+.select-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Maintenance toggle in the admin overview */
 .maintenance-control { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .maintenance-control .mc-main { flex: 1; min-width: 200px; }

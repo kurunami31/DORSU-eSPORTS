@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { getTournaments, getTournament, registerTeam } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import Icon from '../components/Icon.jsx';
+import Dropdown from '../components/Dropdown.jsx';
 import { fileToImage, formatDate, teamSizeLabel } from '../utils.js';
 
 const EMPTY_ROSTER = () => [{ name: '', tag: '' }];
@@ -181,23 +182,17 @@ export default function Register() {
 
             <div className="field">
               <label htmlFor="reg-tournament">Tournament</label>
-              <select
-                id="reg-tournament"
-                className="role-select"
+              <Dropdown
                 value={selected}
-                onChange={(e) => setSelected(Number(e.target.value))}
-                required
+                onChange={(v) => setSelected(Number(v))}
+                options={tournaments.map((t) => ({
+                  value: t.id,
+                  label: `${t.name} — ${t.game} (${t.registered_count}/${t.max_teams} filled)`,
+                }))}
+                placeholder={tournaments.length ? 'Choose a tournament…' : 'No open tournaments right now'}
                 disabled={Boolean(tournamentId)}
-              >
-                <option value="" disabled>
-                  {tournaments.length ? 'Choose a tournament…' : 'No open tournaments right now'}
-                </option>
-                {tournaments.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} — {t.game} ({t.registered_count}/{t.max_teams} filled)
-                  </option>
-                ))}
-              </select>
+                ariaLabel="Tournament"
+              />
             </div>
 
             {tournament && (

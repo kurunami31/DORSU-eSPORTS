@@ -33,6 +33,14 @@ export function AuthProvider({ children }) {
     refresh();
   }, [refresh]);
 
+  // Any API call that returns 401 clears the token and dispatches this event
+  // (see api.js) — drop the in-memory user so the UI locks itself right away.
+  useEffect(() => {
+    const onExpired = () => setUser(null);
+    window.addEventListener('dorsu:auth-expired', onExpired);
+    return () => window.removeEventListener('dorsu:auth-expired', onExpired);
+  }, []);
+
   const signup = useCallback(async (data) => {
     const res = await api('/auth/signup', { method: 'POST', body: JSON.stringify(data) });
     setToken(res.token);
