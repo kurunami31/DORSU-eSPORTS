@@ -4,3 +4,6 @@ server/data/*.db
 server/data/*.db-*
 .env
 *.log
+
+.vercel
+.env*
