@@ -4,9 +4,21 @@ import { getTournament, getRegistrations, generateBrackets } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import Bracket from '../components/Bracket.jsx';
+import RoundRobin from '../components/RoundRobin.jsx';
+import DoubleElim from '../components/DoubleElim.jsx';
 import { GameTile } from '../components/GameGlyph.jsx';
 import Icon from '../components/Icon.jsx';
 import { formatDate, teamSizeLabel } from '../utils.js';
+
+const FORMAT_LABELS = {
+  'single-elimination': 'Single elimination',
+  'round-robin': 'Round robin',
+  'double-elimination': 'Double elimination',
+};
+
+function formatLabel(format) {
+  return FORMAT_LABELS[format] || format;
+}
 
 export default function TournamentDetail() {
   const { id } = useParams();
@@ -57,9 +69,16 @@ export default function TournamentDetail() {
 
   const hasBracket = Boolean(tournament.bracket);
   const pct = Math.min(100, Math.round((registrations.length / tournament.max_teams) * 100));
-  const champion = hasBracket
-    ? tournament.bracket.rounds[tournament.bracket.rounds.length - 1]?.matches[0]?.winnerId
-    : null;
+  let champion = null;
+  if (hasBracket) {
+    if (tournament.format === 'round-robin') {
+      champion = tournament.bracket.standings?.[0]?.teamId ?? null;
+    } else if (tournament.format === 'double-elimination') {
+      champion = tournament.bracket.rounds.find((r) => r.phase === 'final')?.matches[0]?.winnerId ?? null;
+    } else {
+      champion = tournament.bracket.rounds[tournament.bracket.rounds.length - 1]?.matches[0]?.winnerId ?? null;
+    }
+  }
   const championName = champion
     ? registrations.find((r) => r.id === champion)?.team_name
     : null;
@@ -80,7 +99,7 @@ export default function TournamentDetail() {
               <span><Icon name="clock" size={13} /> Reg closes {formatDate(tournament.registration_deadline)}</span>
             </span>
             <span className="tc-meta">
-              <span><Icon name="users" size={13} /> {teamSizeLabel(tournament.team_size)} · {tournament.format === 'single-elimination' ? 'Single elimination' : tournament.format}</span>
+              <span><Icon name="users" size={13} /> {teamSizeLabel(tournament.team_size)} · {formatLabel(tournament.format)}</span>
               <span><Icon name="medal" size={13} /> {tournament.prize || 'Pride & glory'}</span>
             </span>
           </div>
@@ -104,23 +123,29 @@ export default function TournamentDetail() {
 
           <div className="detail-grid">
             <div style={{ minWidth: 0 }}>
-              {/* Bracket */}
+              {/* Bracket / schedule */}
               {hasBracket ? (
-                <Bracket
-                  bracket={tournament.bracket}
-                  admin={admin}
-                  onAdvance={load}
-                />
+                tournament.format === 'round-robin' ? (
+                  <RoundRobin bracket={tournament.bracket} admin={admin} onAdvance={load} />
+                ) : tournament.format === 'double-elimination' ? (
+                  <DoubleElim bracket={tournament.bracket} admin={admin} onAdvance={load} />
+                ) : (
+                  <Bracket
+                    bracket={tournament.bracket}
+                    admin={admin}
+                    onAdvance={load}
+                  />
+                )
               ) : (
                 <div className="card" style={{ padding: '52px 30px', textAlign: 'center' }}>
                   <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: 16, display: 'grid', placeItems: 'center', background: 'var(--blue-soft)', border: '1px solid var(--line-strong)', color: 'var(--blue-bright)' }} aria-hidden="true">
                     <Icon name="dice" size={28} />
                   </div>
-                  <h3 style={{ fontSize: 22, marginBottom: 10 }}>Bracket not drawn yet</h3>
+                  <h3 style={{ fontSize: 22, marginBottom: 10 }}>{tournament.format === 'round-robin' ? 'Schedule not drawn yet' : 'Bracket not drawn yet'}</h3>
                   <p style={{ color: 'var(--muted)', maxWidth: 420, margin: '0 auto 24px', fontSize: 14.5 }}>
                     {tournament.status === 'open'
-                      ? `The matchup is being prepared. Once registration closes (or the bracket is locked), teams are randomly matched into a single-elimination bracket here.`
-                      : 'This tournament has no bracket yet.'}
+                      ? `The matchup is being prepared. Once registration closes (or the bracket is locked), teams are randomly matched into a ${formatLabel(tournament.format).toLowerCase()} schedule here.`
+                      : 'This tournament has no schedule yet.'}
                   </p>
                   {admin && (
                     <button
@@ -128,12 +153,12 @@ export default function TournamentDetail() {
                       disabled={busy || registrations.length < 2}
                       onClick={handleGenerate}
                     >
-                      {busy ? <span className="spin" /> : <Icon name="dice" size={15} />} Generate Brackets
+                      {busy ? <span className="spin" /> : <Icon name="dice" size={15} />} Generate {tournament.format === 'round-robin' ? 'Schedule' : 'Brackets'}
                     </button>
                   )}
                   {admin && registrations.length < 2 && (
                     <p style={{ color: 'var(--muted-2)', fontSize: 12.5, marginTop: 10 }}>
-                      At least 2 registered teams are required to generate brackets.
+                      At least 2 registered teams are required to generate a schedule.
                     </p>
                   )}
                   {!admin && tournament.status === 'open' && (

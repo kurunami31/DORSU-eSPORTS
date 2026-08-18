@@ -895,6 +895,8 @@ function TournamentsPanel({ isAdmin }) {
               <label>Format</label>
               <select className="input" value={form.format} onChange={set('format')}>
                 <option value="single-elimination">Single Elimination</option>
+                <option value="round-robin">Round Robin</option>
+                <option value="double-elimination">Double Elimination</option>
               </select>
             </div>
             <div className="field">

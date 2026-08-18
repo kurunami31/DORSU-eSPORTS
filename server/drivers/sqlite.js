@@ -58,6 +58,8 @@ const SCHEMA = `
   CREATE TABLE IF NOT EXISTS matches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tournament_id INTEGER NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    -- 'winners' | 'losers' | 'final' | 'round-robin'
+    phase TEXT NOT NULL DEFAULT 'winners',
     round INTEGER NOT NULL,
     position INTEGER NOT NULL,
     team_a_id INTEGER,
@@ -150,6 +152,14 @@ function migrateRegistrations() {
   }
 }
 
+// Same pattern for databases created before match phases existed.
+function migrateMatches() {
+  const cols = db.prepare('PRAGMA table_info(matches)').all().map((c) => c.name);
+  if (!cols.includes('phase')) {
+    db.exec("ALTER TABLE matches ADD COLUMN phase TEXT NOT NULL DEFAULT 'winners'");
+  }
+}
+
 export default {
   kind: 'sqlite',
 
@@ -157,6 +167,7 @@ export default {
     db.exec(SCHEMA);
     migrateUsers();
     migrateRegistrations();
+    migrateMatches();
   },
 
   all(sql, params = []) {

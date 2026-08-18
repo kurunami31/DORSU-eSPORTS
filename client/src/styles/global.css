@@ -1629,6 +1629,104 @@ select.input option { background: var(--bg-2); }
 }
 .team-slot.winner .adv-hint { display: none; }
 
+/* Static match cards (round-robin + double-elimination layouts) */
+.match-card.static {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* ── Round-robin schedule ─────────────────────────────── */
+.rr-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+.rr-standings {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  overflow-x: auto;
+}
+.rr-standings h4 {
+  font-family: var(--font-head);
+  font-size: 15px;
+  margin-bottom: 14px;
+  letter-spacing: 0.02em;
+}
+.rr-standings table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  min-width: 460px;
+}
+.rr-standings th {
+  font-family: var(--font-head);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+}
+.rr-standings td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+.rr-standings tr:last-child td { border-bottom: none; }
+.rr-standings tr.lead td { color: var(--yellow-bright); font-weight: 700; }
+.rr-standings .rr-team { font-family: var(--font-head); font-weight: 600; }
+.rr-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 252px;
+  gap: 26px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.rr-round {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Double elimination ───────────────────────────────── */
+.de-shell {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .de-shell { grid-template-columns: 1fr; }
+}
+.de-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.de-col-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--blue-bright);
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.de-col:nth-child(2) .de-col-title { color: var(--yellow); }
+.de-col:nth-child(3) .de-col-title { color: var(--orange); }
+.de-round {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 /* ── Champion banner ────────────────────────────────────── */
 .champion-banner {
   display: flex;

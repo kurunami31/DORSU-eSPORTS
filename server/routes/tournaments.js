@@ -17,7 +17,7 @@ const PUBLIC_FIELDS = `
   start_date, registration_deadline, image, created_at
 `;
 
-const FORMATS = ['single-elimination'];
+const FORMATS = ['single-elimination', 'round-robin', 'double-elimination'];
 const STATUSES = ['open', 'locked', 'active', 'finished'];
 
 async function withCounts(rows) {

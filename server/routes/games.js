@@ -21,7 +21,8 @@ router.get('/', asyncHandler(async (req, res) => {
     ORDER BY open_count DESC, entrants DESC, t.game ASC
   `);
 
-  // Champions of finished tournaments (winner of the final round).
+  // Champions of finished tournaments — elimination formats crown the winner
+  // of the final round; round-robin champions are decided by most wins.
   const champs = await db.all(`
     SELECT t.game, t.id AS tournament_id, t.name AS tournament_name,
            r.team_name, r.team_image, r.entry_type
@@ -29,13 +30,30 @@ router.get('/', asyncHandler(async (req, res) => {
     JOIN tournaments t ON t.id = m.tournament_id
     JOIN registrations r ON r.id = m.winner_id
     WHERE t.status = 'finished'
+      AND t.format <> 'round-robin'
       AND m.winner_id IS NOT NULL
       AND m.round = (SELECT MAX(round) FROM matches mm WHERE mm.tournament_id = m.tournament_id)
     ORDER BY t.id DESC
   `);
+  const rrChamps = await db.all(`
+    SELECT t.game, t.id AS tournament_id, t.name AS tournament_name,
+           r.team_name, r.team_image, r.entry_type
+    FROM (
+      SELECT tournament_id, winner_id,
+             RANK() OVER (PARTITION BY tournament_id ORDER BY COUNT(*) DESC) AS rk
+      FROM matches
+      WHERE status = 'complete' AND winner_id IS NOT NULL
+      GROUP BY tournament_id, winner_id
+    ) w
+    JOIN tournaments t ON t.id = w.tournament_id
+      AND t.status = 'finished' AND t.format = 'round-robin'
+    JOIN registrations r ON r.id = w.winner_id
+    WHERE w.rk = 1
+    ORDER BY t.id DESC
+  `);
 
   const byGame = new Map(games.map((g) => [g.game, g]));
-  for (const c of champs) {
+  for (const c of [...champs, ...rrChamps]) {
     const g = byGame.get(c.game);
     if (!g) continue;
     if (!g.champions) g.champions = [];

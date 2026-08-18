@@ -63,6 +63,8 @@ const SCHEMA = `
   CREATE TABLE IF NOT EXISTS matches (
     id SERIAL PRIMARY KEY,
     tournament_id INTEGER NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    -- 'winners' | 'losers' | 'final' | 'round-robin'
+    phase TEXT NOT NULL DEFAULT 'winners',
     round INTEGER NOT NULL,
     position INTEGER NOT NULL,
     team_a_id INTEGER,
@@ -126,6 +128,7 @@ const SCHEMA = `
   ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT '';
   ALTER TABLE registrations ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'team';
   ALTER TABLE registrations ADD COLUMN IF NOT EXISTS team_image TEXT NOT NULL DEFAULT '';
+  ALTER TABLE matches ADD COLUMN IF NOT EXISTS phase TEXT NOT NULL DEFAULT 'winners';
 
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (LOWER(username));
 

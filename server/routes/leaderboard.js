@@ -28,7 +28,7 @@ router.get('/', asyncHandler(async (req, res) => {
   regSql += ' ORDER BY t.id DESC';
   const regs = await db.all(regSql, regParams);
 
-  const [wins, apps, titles] = await Promise.all([
+  const [wins, apps, titles, rrTitles] = await Promise.all([
     db.all(
       `SELECT winner_id AS rid, COUNT(*) AS n
        FROM matches
@@ -46,15 +46,30 @@ router.get('/', asyncHandler(async (req, res) => {
       `SELECT m.winner_id AS rid, COUNT(*) AS n
        FROM matches m
        JOIN tournaments t ON t.id = m.tournament_id
-       WHERE t.status = 'finished' AND m.winner_id IS NOT NULL
+       WHERE t.status = 'finished' AND t.format <> 'round-robin' AND m.winner_id IS NOT NULL
          AND m.round = (SELECT MAX(round) FROM matches mm WHERE mm.tournament_id = m.tournament_id)
        GROUP BY m.winner_id`
+    ),
+    db.all(
+      `SELECT w.winner_id AS rid, COUNT(DISTINCT w.tournament_id) AS n
+       FROM (
+         SELECT tournament_id, winner_id,
+                RANK() OVER (PARTITION BY tournament_id ORDER BY COUNT(*) DESC) AS rk
+         FROM matches
+         WHERE status = 'complete' AND winner_id IS NOT NULL
+         GROUP BY tournament_id, winner_id
+       ) w
+       JOIN tournaments t ON t.id = w.tournament_id
+         AND t.status = 'finished' AND t.format = 'round-robin'
+       WHERE w.rk = 1
+       GROUP BY w.winner_id`
     ),
   ]);
 
   const winMap = new Map(wins.map((w) => [w.rid, w.n]));
   const appMap = new Map(apps.map((a) => [a.team_id, a.n]));
   const titleMap = new Map(titles.map((t) => [t.rid, t.n]));
+  const rrTitleMap = new Map(rrTitles.map((t) => [t.rid, t.n]));
 
   // Merge per-team-name-per-game so one identity ranks once across seasons.
   const merged = new Map();
@@ -77,7 +92,7 @@ router.get('/', asyncHandler(async (req, res) => {
     row.tournaments += 1;
     row.played += appMap.get(r.rid) || 0;
     row.wins += winMap.get(r.rid) || 0;
-    row.titles += titleMap.get(r.rid) || 0;
+    row.titles += (titleMap.get(r.rid) || 0) + (rrTitleMap.get(r.rid) || 0);
     // Prefer the most recent uploaded logo.
     if (r.team_image) row.team_image = r.team_image;
   }
